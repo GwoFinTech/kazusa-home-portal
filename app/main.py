@@ -1,4 +1,4 @@
-"""home-portal — lightweight Docker-label-based service dashboard."""
+"""home-portal — Docker-label service dashboard + auth gateway."""
 from __future__ import annotations
 
 import os
@@ -7,20 +7,15 @@ from dataclasses import dataclass, asdict
 from typing import Optional
 
 import docker
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-# ── Label schema ─────────────────────────────────────────
-# homepage.enable     = "true"
-# homepage.title      = "tsummt"
-# homepage.description = "tsuMomentum Scanner Dashboard"
-# homepage.icon       = "📊" or "icon-chart"
-# homepage.url        = "https://tsummt.milktea-jp1.feng.moe" (optional, auto-derived)
-# homepage.category   = "quant" (optional, for future grouping)
-# homepage.order      = "10" (optional, lower = further left)
+from .auth import router as auth_router, _get_current_user
+from . import config
 
+# ── Label schema ─────────────────────────────────────────
 LABEL_PREFIX = "homepage"
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
@@ -38,7 +33,6 @@ class ServiceEntry:
 
 
 def _extract_host_from_traefik(labels: dict) -> Optional[str]:
-    """Try to extract the first Host(...) from traefik router rules."""
     for k, v in labels.items():
         if "rule" in k and "Host(" in v:
             m = re.search(r"Host\(`([^`]+)`\)", v)
@@ -48,7 +42,6 @@ def _extract_host_from_traefik(labels: dict) -> Optional[str]:
 
 
 def discover_services() -> list[ServiceEntry]:
-    """Scan running Docker containers for homepage.* labels."""
     try:
         client = docker.from_env()
     except Exception:
@@ -69,7 +62,7 @@ def discover_services() -> list[ServiceEntry]:
             name=c.name or "unknown",
             title=labels.get(f"{LABEL_PREFIX}.title", c.name or "Unknown"),
             description=labels.get(f"{LABEL_PREFIX}.description", ""),
-            icon=labels.get(f"{LABEL_PREFIX}.icon", "🌐"),
+            icon=labels.get(f"{LABEL_PREFIX}.icon", "\U0001f310"),
             url=url,
             category=labels.get(f"{LABEL_PREFIX}.category", ""),
             order=int(labels.get(f"{LABEL_PREFIX}.order", "100")),
@@ -82,7 +75,7 @@ def discover_services() -> list[ServiceEntry]:
 
 # ── FastAPI ──────────────────────────────────────────────
 
-app = FastAPI(title="home-portal", version="1.0.0")
+app = FastAPI(title="home-portal", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -91,18 +84,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount auth router
+app.include_router(auth_router)
+
 
 @app.get("/api/services")
 def list_services():
     return [asdict(s) for s in discover_services()]
 
 
-# Serve the SPA
+@app.get("/api/me")
+def api_me(request: Request):
+    user = _get_current_user(request)
+    if not user:
+        return {"authenticated": False}
+    return {"authenticated": True, **user}
+
+
+# ── Static pages ─────────────────────────────────────────
+
 @app.get("/")
-def index():
+def index(request: Request):
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
-# Mount static assets (if any)
-if os.path.isdir(os.path.join(STATIC_DIR, "assets")):
-    app.mount("/assets", StaticFiles(directory=os.path.join(STATIC_DIR, "assets")), name="assets")
+@app.get("/login")
+def login_page():
+    return FileResponse(os.path.join(STATIC_DIR, "login.html"))
+
+
+@app.get("/admin")
+def admin_page(request: Request):
+    return FileResponse(os.path.join(STATIC_DIR, "admin.html"))
+
+
+# Mount static assets
+_assets = os.path.join(STATIC_DIR, "assets")
+if os.path.isdir(_assets):
+    app.mount("/assets", StaticFiles(directory=_assets), name="assets")

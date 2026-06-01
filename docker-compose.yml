@@ -1,7 +1,7 @@
 services:
-  home-portal:
+  kazusa-home-portal:
     build: .
-    container_name: home-portal
+    container_name: kazusa-home-portal
     restart: unless-stopped
     environment:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -11,7 +11,7 @@ services:
       - ADMIN_EMAIL=fythonx@gmail.com
       - DB_HOST=host.docker.internal
       - DB_PORT=5432
-      - DB_NAME=tsummt
+      - DB_NAME=kazusa_home
       - DB_USER=postgres
       - PORTAL_URL=https://home.milktea-jp1.feng.moe
     extra_hosts:
@@ -27,10 +27,10 @@ services:
       - "traefik.http.routers.home.entrypoints=websecure"
       - "traefik.http.routers.home.tls.certresolver=letsencrypt"
       - "traefik.http.services.home.loadbalancer.server.port=8000"
-      # ── ForwardAuth middleware (referenced by other services as home-auth@docker) ──
-      - "traefik.http.middlewares.home-auth.forwardauth.address=http://home-portal:8000/auth/verify"
-      - "traefik.http.middlewares.home-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Email,X-User-Name,X-User-Role"
-      - "traefik.http.middlewares.home-auth.forwardauth.trustForwardHeader=true"
+      # ── ForwardAuth middleware (referenced by other services as kazusa-auth@docker) ──
+      - "traefik.http.middlewares.kazusa-auth.forwardauth.address=http://kazusa-home-portal:8000/auth/verify"
+      - "traefik.http.middlewares.kazusa-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Email,X-User-Name,X-User-Role"
+      - "traefik.http.middlewares.kazusa-auth.forwardauth.trustForwardHeader=true"
       # ── Homepage (self) ──
       - "homepage.enable=true"
       - "homepage.title=Home"

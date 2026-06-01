@@ -6,14 +6,14 @@ services:
     environment:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=https://home.milktea-jp1.feng.moe/auth/callback
+      - GOOGLE_REDIRECT_URI=https://home.kazusa.feng.moe/auth/callback
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
       - ADMIN_EMAIL=fythonx@gmail.com
       - DB_HOST=host.docker.internal
       - DB_PORT=5432
       - DB_NAME=kazusa_home
       - DB_USER=postgres
-      - PORTAL_URL=https://home.milktea-jp1.feng.moe
+      - PORTAL_URL=https://kazusa.feng.moe
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -23,7 +23,7 @@ services:
     labels:
       # ── Traefik ──
       - "traefik.enable=true"
-      - "traefik.http.routers.home.rule=Host(`home.milktea-jp1.feng.moe`) || Host(`home.kazusa.feng.moe`) || Host(`kazusa.feng.moe`)"
+      - "traefik.http.routers.home.rule=Host(`kazusa.feng.moe`) || Host(`home.kazusa.feng.moe`) || Host(`home.milktea-jp1.feng.moe`)"
       - "traefik.http.routers.home.entrypoints=websecure"
       - "traefik.http.routers.home.tls.certresolver=letsencrypt"
       - "traefik.http.services.home.loadbalancer.server.port=8000"
@@ -36,7 +36,7 @@ services:
       - "homepage.title=Home"
       - "homepage.description=Service Portal"
       - "homepage.icon=🏠"
-      - "homepage.url=https://home.milktea-jp1.feng.moe"
+      - "homepage.url=https://kazusa.feng.moe"
       - "homepage.order=0"
 
 networks:

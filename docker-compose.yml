@@ -10,7 +10,7 @@ services:
     labels:
       # ── Traefik ──
       - "traefik.enable=true"
-      - "traefik.http.routers.home.rule=Host(`home.milktea-jp1.feng.moe`)"
+      - "traefik.http.routers.home.rule=Host(`home.milktea-jp1.feng.moe`) || Host(`home.kazusa.feng.moe`) || Host(`kazusa.feng.moe`)"
       - "traefik.http.routers.home.entrypoints=websecure"
       - "traefik.http.routers.home.tls.certresolver=letsencrypt"
       - "traefik.http.services.home.loadbalancer.server.port=8000"

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import json
+import html
 import secrets
 import time
 from datetime import datetime, timedelta, timezone
@@ -31,6 +31,58 @@ SCOPES = "openid email profile"
 def _sign(data: str) -> str:
     """HMAC-SHA256 signature."""
     return hmac.new(config.SECRET.encode(), data.encode(), hashlib.sha256).hexdigest()
+
+
+def _error_page(title: str, icon: str, message: str, action_url: str, action_text: str, status: int) -> str:
+    """Render a styled error page matching portal design."""
+    return f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title} — kazusa</title>
+  <style>
+    :root {{
+      --bg: #fafafa; --card-bg: #fff; --border: #e5e7eb; --text: #171717;
+      --text-muted: #737373; --text-subtle: #a3a3a3; --accent: #2563eb;
+    }}
+    @media (prefers-color-scheme: dark) {{
+      :root {{
+        --bg: #0a0a0a; --card-bg: #171717; --border: #262626; --text: #fafafa;
+        --text-muted: #a3a3a3; --text-subtle: #525252; --accent: #60a5fa;
+      }}
+    }}
+    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }}
+    .container {{
+      text-align: center; padding: 48px 32px; max-width: 400px;
+    }}
+    .icon {{ font-size: 48px; margin-bottom: 16px; }}
+    h1 {{ font-size: 20px; font-weight: 600; margin-bottom: 8px; }}
+    p {{ color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }}
+    a {{
+      display: inline-block; padding: 10px 24px; border-radius: 8px;
+      background: var(--accent); color: #fff; text-decoration: none;
+      font-size: 14px; font-weight: 500; transition: opacity .15s;
+    }}
+    a:hover {{ opacity: .85; }}
+    .footer {{ margin-top: 32px; font-size: 11px; color: var(--text-subtle); }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">{icon}</div>
+    <h1>{title}</h1>
+    <p>{message}</p>
+    <a href="{action_url}">{action_text}</a>
+    <div class="footer">kazusa home portal</div>
+  </div>
+</body>
+</html>"""
 
 
 def _make_session_token(user_id: int, email: str) -> str:
@@ -227,17 +279,27 @@ async def auth_verify(request: Request, response: Response):
     # Check session
     user = _get_current_user(request)
     if not user:
-        # Build login redirect URL
         original_url = f"{forwarded_proto}://{forwarded_host}{forwarded_uri}"
         login_url = f"{config.PORTAL_URL}/auth/login?return={original_url}"
-        return Response(status_code=401, headers={"Location": login_url})
+        return HTMLResponse(_error_page(
+            title="需要登录",
+            icon="🔒",
+            message="你还未登录，请先登录后再访问此页面。",
+            action_url=login_url,
+            action_text="使用 Google 账号登录",
+            status=401,
+        ), status_code=401)
 
     # Check ACL
     if not _check_acl(user["email"], forwarded_host):
-        return HTMLResponse(
-            "<h1>403 Forbidden</h1><p>Your account does not have access to this resource.</p>",
-            status_code=403,
-        )
+        return HTMLResponse(_error_page(
+            title="无权访问",
+            icon="🚫",
+            message=f"你的账号 <strong>{html.escape(user['email'])}</strong> 没有访问此应用的权限。<br>如需开通，请联系管理员。",
+            action_url=config.PORTAL_URL,
+            action_text="返回主页",
+            status=403,
+        ), status_code=403)
 
     # Allow — pass user info to upstream
     response.status_code = 200

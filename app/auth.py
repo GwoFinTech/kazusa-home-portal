@@ -43,10 +43,14 @@ def _make_session_token(user_id: int, email: str) -> str:
 
 def _verify_session_token(token: str) -> Optional[dict]:
     """Verify and decode session token. Returns user info or None."""
-    parts = token.split(".")
-    if len(parts) != 4:
+    # Token format: user_id.email.timestamp.signature
+    # Email may contain dots, so split from the right
+    try:
+        rest, sig = token.rsplit(".", 1)
+        rest, ts_str = rest.rsplit(".", 1)
+        user_id_str, email = rest.split(".", 1)
+    except ValueError:
         return None
-    user_id_str, email, ts_str, sig = parts
     payload = f"{user_id_str}.{email}.{ts_str}"
     if not hmac.compare_digest(_sign(payload), sig):
         return None
@@ -128,7 +132,9 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
             "grant_type": "authorization_code",
         })
         if token_resp.status_code != 200:
-            return HTMLResponse("<h1>Token exchange failed</h1>", status_code=400)
+            import logging
+            logging.error("Token exchange failed: %s %s", token_resp.status_code, token_resp.text)
+            return HTMLResponse(f"<h1>Token exchange failed</h1><pre>{token_resp.text}</pre>", status_code=400)
 
         access_token = token_resp.json()["access_token"]
         userinfo_resp = await client.get(GOOGLE_USERINFO_URL, headers={

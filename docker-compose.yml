@@ -1,0 +1,28 @@
+services:
+  home-portal:
+    build: .
+    container_name: home-portal
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-net
+    labels:
+      # ── Traefik ──
+      - "traefik.enable=true"
+      - "traefik.http.routers.home.rule=Host(`home.milktea-jp1.feng.moe`)"
+      - "traefik.http.routers.home.entrypoints=websecure"
+      - "traefik.http.routers.home.tls.certresolver=letsencrypt"
+      - "traefik.http.services.home.loadbalancer.server.port=8000"
+      # ── Homepage (self) ──
+      - "homepage.enable=true"
+      - "homepage.title=Home"
+      - "homepage.description=Service Portal"
+      - "homepage.icon=🏠"
+      - "homepage.url=https://home.milktea-jp1.feng.moe"
+      - "homepage.order=0"
+
+networks:
+  traefik-net:
+    external: true
+    name: traefik_traefik-net

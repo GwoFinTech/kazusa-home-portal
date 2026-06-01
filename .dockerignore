@@ -1,0 +1,6 @@
+.git
+.python-version
+.env
+__pycache__
+*.pyc
+.dockerignore

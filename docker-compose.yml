@@ -31,13 +31,6 @@ services:
       - "traefik.http.middlewares.kazusa-auth.forwardauth.address=http://kazusa-home-portal:8000/auth/verify"
       - "traefik.http.middlewares.kazusa-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Email,X-User-Name,X-User-Role"
       - "traefik.http.middlewares.kazusa-auth.forwardauth.trustForwardHeader=true"
-      # ── Homepage (self) ──
-      - "homepage.enable=true"
-      - "homepage.title=Home"
-      - "homepage.description=Service Portal"
-      - "homepage.icon=🏠"
-      - "homepage.url=https://kazusa.feng.moe"
-      - "homepage.order=0"
 
 networks:
   traefik-net:

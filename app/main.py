@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from .auth import router as auth_router, _get_current_user
+from .auth import router as auth_router, _get_current_user, _check_acl
 from . import config
 
 # ── Label schema ─────────────────────────────────────────
@@ -27,6 +27,7 @@ class ServiceEntry:
     description: str
     icon: str
     url: str
+    host: str = ""
     category: str = ""
     order: int = 100
     status: str = "running"
@@ -62,8 +63,9 @@ def discover_services() -> list[ServiceEntry]:
             name=c.name or "unknown",
             title=labels.get(f"{LABEL_PREFIX}.title", c.name or "Unknown"),
             description=labels.get(f"{LABEL_PREFIX}.description", ""),
-            icon=labels.get(f"{LABEL_PREFIX}.icon", "\U0001f310"),
+            icon=labels.get(f"{LABEL_PREFIX}.icon", "\\U0001f310"),
             url=url,
+            host=host or "",
             category=labels.get(f"{LABEL_PREFIX}.category", ""),
             order=int(labels.get(f"{LABEL_PREFIX}.order", "100")),
             status=c.status,
@@ -89,8 +91,22 @@ app.include_router(auth_router)
 
 
 @app.get("/api/services")
-def list_services():
-    return [asdict(s) for s in discover_services()]
+def list_services(request: Request):
+    user = _get_current_user(request)
+    services = discover_services()
+    result = []
+    for s in services:
+        d = asdict(s)
+        if not user:
+            d["access"] = "unauthenticated"
+        elif not s.host:
+            d["access"] = "allowed"
+        elif _check_acl(user["email"], s.host):
+            d["access"] = "allowed"
+        else:
+            d["access"] = "denied"
+        result.append(d)
+    return result
 
 
 @app.get("/api/me")

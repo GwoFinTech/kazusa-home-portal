@@ -46,6 +46,7 @@
       border-radius: var(--radius); box-shadow: var(--shadow);
       text-decoration: none; color: inherit;
       transition: background .15s, border-color .15s;
+      position: relative;
     }
     .card:hover { background: var(--hover-bg); border-color: #d4d4d4; }
     @media (prefers-color-scheme: dark) { .card:hover { border-color: #404040; } }
@@ -58,6 +59,22 @@
     .status-other { background: #a3a3a3; }
     .empty { text-align: center; color: var(--text-subtle); font-size: 14px; padding: 64px 24px; }
     footer { margin-top: auto; padding: 24px; font-size: 11px; color: var(--text-subtle); }
+
+    /* Access control styles */
+    .card.disabled {
+      opacity: .55; cursor: not-allowed; pointer-events: none;
+    }
+    .card .badge {
+      position: absolute; top: 8px; right: 8px;
+      font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      white-space: nowrap; font-weight: 500;
+    }
+    .badge-login {
+      background: #3b82f6; color: #fff;
+    }
+    .badge-denied {
+      background: #ef4444; color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -67,7 +84,7 @@
   <div id="user-bar" class="user-bar" style="display:none"></div>
 </header>
 <div class="grid" id="grid"></div>
-<footer>home-portal</footer>
+<footer>kazusa home portal</footer>
 <script>
 const grid = document.getElementById('grid');
 const subtitle = document.getElementById('subtitle');
@@ -102,14 +119,24 @@ async function loadServices() {
     const services = await res.json();
     subtitle.textContent = `${services.length} service${services.length !== 1 ? 's' : ''}`;
     if (!services.length) { grid.innerHTML = '<div class="empty">no services found</div>'; return; }
-    grid.innerHTML = services.map(s => `
-      <a class="card" href="${esc(s.url)}" target="_blank" rel="noopener"
-         ${!s.url ? 'style="pointer-events:none;opacity:.5"' : ''}>
-        <div class="icon">${esc(s.icon)}</div>
-        <div class="meta"><h3>${esc(s.title)}</h3>${s.description ? `<p>${esc(s.description)}</p>` : ''}</div>
-        <div class="status-dot status-${s.status === 'running' ? 'running' : 'other'}" title="${esc(s.status)}"></div>
-      </a>
-    `).join('');
+    grid.innerHTML = services.map(s => {
+      const canAccess = s.access === 'allowed';
+      const isUnauth = s.access === 'unauthenticated';
+      const isDenied = s.access === 'denied';
+      const disabled = !canAccess && s.url;
+      const badge = isUnauth ? '<span class="badge badge-login">需要登录</span>'
+                  : isDenied ? '<span class="badge badge-denied">联系管理员申请权限</span>'
+                  : '';
+      return `
+        <a class="card ${disabled ? 'disabled' : ''}" href="${canAccess ? esc(s.url) : '#'}" target="_blank" rel="noopener"
+           ${!s.url ? 'style="pointer-events:none;opacity:.5"' : ''}>
+          ${badge}
+          <div class="icon">${esc(s.icon)}</div>
+          <div class="meta"><h3>${esc(s.title)}</h3>${s.description ? `<p>${esc(s.description)}</p>` : ''}</div>
+          <div class="status-dot status-${s.status === 'running' ? 'running' : 'other'}" title="${esc(s.status)}"></div>
+        </a>
+      `;
+    }).join('');
   } catch { subtitle.textContent = 'error'; }
 }
 

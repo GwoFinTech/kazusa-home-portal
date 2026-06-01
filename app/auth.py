@@ -234,7 +234,7 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
         httponly=True,
         secure=True,
         samesite="lax",
-        domain=".feng.moe",
+        domain=config.COOKIE_DOMAIN if config.COOKIE_DOMAIN else None,
     )
     return response
 
@@ -243,7 +243,7 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
 async def auth_logout():
     """Clear session and redirect to portal."""
     response = RedirectResponse(config.PORTAL_URL)
-    response.delete_cookie(key=config.COOKIE, domain=".feng.moe")
+    response.delete_cookie(key=config.COOKIE, domain=config.COOKIE_DOMAIN if config.COOKIE_DOMAIN else None)
     return response
 
 
@@ -271,7 +271,8 @@ async def auth_verify(request: Request, response: Response):
     forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
 
     # Allow portal and auth endpoints without auth
-    if forwarded_host in ("home.milktea-jp1.feng.moe", "home.kazusa.feng.moe", "kazusa.feng.moe"):
+    portal_hosts = {h.strip() for h in config.PORTAL_HOSTS.split(",") if h.strip()} if config.PORTAL_HOSTS else set()
+    if forwarded_host in portal_hosts:
         return Response(status_code=200)
     if forwarded_uri.startswith("/auth/"):
         return Response(status_code=200)

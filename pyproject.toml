@@ -2,6 +2,8 @@
 name = "kazusa-home-portal"
 version = "2.0.0"
 description = "Docker-label-based service dashboard + auth gateway"
+readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

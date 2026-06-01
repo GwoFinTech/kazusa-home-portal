@@ -1,5 +1,9 @@
 # Kazusa Home Portal
 
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
+# Kazusa Home Portal
+
 基于 Docker labels 的 Web 服务门户系统，提供服务展示、Google OAuth 登录和基于 ACL 的访问控制。
 
 ## 架构

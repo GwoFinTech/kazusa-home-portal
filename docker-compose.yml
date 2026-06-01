@@ -6,14 +6,17 @@ services:
     environment:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_REDIRECT_URI=https://home.kazusa.feng.moe/auth/callback
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
-      - ADMIN_EMAIL=fythonx@gmail.com
-      - DB_HOST=host.docker.internal
-      - DB_PORT=5432
-      - DB_NAME=kazusa_home
-      - DB_USER=postgres
-      - PORTAL_URL=https://kazusa.feng.moe
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN:-}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - DB_HOST=${DB_HOST:-host.docker.internal}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-kazusa_home}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-}
+      - PORTAL_URL=${PORTAL_URL}
+      - PORTAL_HOSTS=${PORTAL_HOSTS}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -23,7 +26,7 @@ services:
     labels:
       # ── Traefik ──
       - "traefik.enable=true"
-      - "traefik.http.routers.home.rule=Host(`kazusa.feng.moe`) || Host(`home.kazusa.feng.moe`) || Host(`home.milktea-jp1.feng.moe`)"
+      - "traefik.http.routers.home.rule=Host(`${DOMAIN}`) || Host(`home.${DOMAIN}`)"
       - "traefik.http.routers.home.entrypoints=websecure"
       - "traefik.http.routers.home.tls.certresolver=letsencrypt"
       - "traefik.http.services.home.loadbalancer.server.port=8000"

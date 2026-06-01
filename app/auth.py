@@ -9,7 +9,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatch
 from typing import Optional
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 
 import httpx
 from fastapi import APIRouter, Cookie, Request, Response
@@ -243,7 +243,7 @@ async def auth_verify(request: Request, response: Response):
     response.status_code = 200
     response.headers["X-User-Id"] = str(user["id"])
     response.headers["X-User-Email"] = user["email"]
-    response.headers["X-User-Name"] = user.get("name") or ""
+    response.headers["X-User-Name"] = quote(user.get("name") or "")
     response.headers["X-User-Role"] = user.get("role") or "user"
     return response
 

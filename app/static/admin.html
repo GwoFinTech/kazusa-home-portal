@@ -63,6 +63,18 @@
       <tbody id="racl-body"></tbody>
     </table>
 
+    <!-- Role Presets -->
+    <h2>Role Presets <span class="hint">为未登录邮箱预设角色，首次登录自动生效</span></h2>
+    <div class="form-row">
+      <input id="preset-email" placeholder="email (e.g. friend@gmail.com)">
+      <input id="preset-role" placeholder="role (e.g. friend)">
+      <button onclick="addPreset()">Add</button>
+    </div>
+    <table>
+      <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
+      <tbody id="presets-body"></tbody>
+    </table>
+
     <!-- Users -->
     <h2>Users</h2>
     <table>
@@ -97,7 +109,7 @@ async function init() {
   const u = await r.json();
   if (!u.authenticated || u.role !== 'admin') { document.getElementById('denied').style.display='block'; return; }
   document.getElementById('panel').style.display='block';
-  loadRoleAcl(); loadUsers(); loadAcl();
+  loadRoleAcl(); loadPresets(); loadUsers(); loadAcl();
 }
 
 // ── Role ACL ──
@@ -131,6 +143,60 @@ async function toggleRoleAcl(id, enabled) {
 async function delRoleAcl(id) {
   await fetch(`/api/admin/role-acl/${id}`, {method:'DELETE'});
   showMsg('role rule deleted'); loadRoleAcl();
+}
+
+// ── Role Presets ──
+
+async function loadPresets() {
+  const r = await fetch('/api/admin/role-presets');
+  if (!r.ok) return;
+  const presets = await r.json();
+  document.getElementById('presets-body').innerHTML = presets.map(p => {
+    const badgeCls = p.role === 'admin' ? 'badge-admin' : p.role === 'user' ? 'badge-user' : 'badge-custom';
+    return `
+    <tr>
+      <td>${esc(p.email)}</td>
+      <td>
+        <span class="badge ${badgeCls}" id="preset-badge-${p.id}">${esc(p.role)}</span>
+        <input class="role-input" id="preset-input-${p.id}" value="${esc(p.role)}" style="display:none"
+               onkeydown="if(event.key==='Enter')savePreset(${p.id})">
+        <button class="role-save" id="preset-edit-btn-${p.id}" onclick="editPreset(${p.id})">edit</button>
+        <button class="role-save" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">save</button>
+      </td>
+      <td><button class="danger" onclick="delPreset(${p.id},'${esc(p.email)}')">delete</button></td>
+    </tr>
+  `}).join('');
+}
+
+function editPreset(id) {
+  document.getElementById('preset-badge-' + id).style.display = 'none';
+  document.getElementById('preset-input-' + id).style.display = '';
+  document.getElementById('preset-edit-btn-' + id).style.display = 'none';
+  document.getElementById('preset-save-btn-' + id).style.display = '';
+  document.getElementById('preset-input-' + id).focus();
+  document.getElementById('preset-input-' + id).select();
+}
+
+async function savePreset(id) {
+  const role = document.getElementById('preset-input-' + id).value.trim();
+  if (!role) { showMsg('role must not be empty', false); return; }
+  await fetch(`/api/admin/role-presets/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
+  showMsg('preset updated'); loadPresets();
+}
+
+async function addPreset() {
+  const email = document.getElementById('preset-email').value.trim();
+  const role = document.getElementById('preset-role').value.trim();
+  if (!email || !role) { showMsg('email and role required', false); return; }
+  const r = await fetch('/api/admin/role-presets', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,role})});
+  if (r.ok) { showMsg('preset added'); document.getElementById('preset-email').value=''; document.getElementById('preset-role').value=''; loadPresets(); }
+  else { const e = await r.json(); showMsg(e.error || 'failed', false); }
+}
+
+async function delPreset(id, email) {
+  if (!confirm(`Delete preset for ${email}?`)) return;
+  await fetch(`/api/admin/role-presets/${id}`, {method:'DELETE'});
+  showMsg('preset deleted'); loadPresets();
 }
 
 // ── Users ──

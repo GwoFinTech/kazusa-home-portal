@@ -224,10 +224,18 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
                 name = EXCLUDED.name,
                 picture = EXCLUDED.picture,
                 last_login_at = now()
-            RETURNING id, role
+            RETURNING id, role, (xmax = 0) AS is_new
         """, (email, name, picture))
         user = cur.fetchone()
         user_id = user["id"]
+        is_new = user["is_new"]
+
+        # Apply role preset on first login
+        if is_new:
+            cur.execute("SELECT role FROM home_role_presets WHERE email = %s", (email,))
+            preset = cur.fetchone()
+            if preset:
+                cur.execute("UPDATE home_users SET role = %s WHERE id = %s", (preset["role"], user_id))
 
         # Ensure admin role
         if email == config.ADMIN_EMAIL:
@@ -484,4 +492,62 @@ async def delete_role_acl(request: Request, rule_id: int):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     with db_cursor() as cur:
         cur.execute("DELETE FROM home_role_acl WHERE id = %s", (rule_id,))
+    return {"ok": True}
+
+
+# ── Role Presets Admin API ──────────────────────────────
+
+@router.get("/api/admin/role-presets")
+async def list_role_presets(request: Request):
+    if not _require_admin(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("SELECT id, email, role, created_at FROM home_role_presets ORDER BY id")
+        presets = [dict(r) for r in cur.fetchall()]
+    for p in presets:
+        if p["created_at"]:
+            p["created_at"] = p["created_at"].isoformat()
+    return presets
+
+
+@router.post("/api/admin/role-presets")
+async def create_role_preset(request: Request):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    email = body.get("email", "").strip()
+    role = body.get("role", "").strip()
+    if not email or not role:
+        return JSONResponse({"error": "email and role required"}, status_code=400)
+    with db_cursor() as cur:
+        cur.execute(
+            "INSERT INTO home_role_presets (email, role) VALUES (%s, %s) RETURNING id",
+            (email, role),
+        )
+        preset_id = cur.fetchone()["id"]
+    return {"id": preset_id, "email": email, "role": role}
+
+
+@router.put("/api/admin/role-presets/{preset_id}")
+async def update_role_preset(request: Request, preset_id: int):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    with db_cursor() as cur:
+        if "email" in body:
+            cur.execute("UPDATE home_role_presets SET email = %s WHERE id = %s", (body["email"].strip(), preset_id))
+        if "role" in body:
+            cur.execute("UPDATE home_role_presets SET role = %s WHERE id = %s", (body["role"].strip(), preset_id))
+    return {"ok": True}
+
+
+@router.delete("/api/admin/role-presets/{preset_id}")
+async def delete_role_preset(request: Request, preset_id: int):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM home_role_presets WHERE id = %s", (preset_id,))
     return {"ok": True}

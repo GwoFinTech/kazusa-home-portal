@@ -21,12 +21,16 @@
     .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
     .badge-admin { background: #dbeafe; color: #1d4ed8; }
     .badge-user { background: #f3f4f6; color: #6b7280; }
-    @media (prefers-color-scheme: dark) { .badge-admin { background: #1e3a5f; color: #93c5fd; } .badge-user { background: #262626; color: #a3a3a3; } }
+    .badge-custom { background: #fef3c7; color: #92400e; }
+    @media (prefers-color-scheme: dark) { .badge-admin { background: #1e3a5f; color: #93c5fd; } .badge-user { background: #262626; color: #a3a3a3; } .badge-custom { background: #422006; color: #fbbf24; } }
     button { padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); font-size: 12px; cursor: pointer; }
     button:hover { background: var(--hover-bg); }
     button.danger { color: var(--danger); border-color: var(--danger); }
     button.danger:hover { background: #fef2f2; }
     @media (prefers-color-scheme: dark) { button.danger:hover { background: #2a1010; } }
+    .role-input { width: 80px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--card-bg); color: var(--text); font-size: 12px; font-family: inherit; }
+    .role-input:focus { outline: none; border-color: #94a3b8; }
+    .role-save { padding: 2px 8px; font-size: 11px; }
     .form-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
     .form-row input, .form-row select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); font-size: 13px; flex: 1; }
     .form-row input:focus, .form-row select:focus { outline: none; border-color: #94a3b8; }
@@ -135,27 +139,44 @@ async function loadUsers() {
   const r = await fetch('/api/admin/users');
   if (!r.ok) return;
   const users = await r.json();
-  document.getElementById('users-body').innerHTML = users.map(u => `
+  document.getElementById('users-body').innerHTML = users.map(u => {
+    const isBuiltin = u.role === 'admin' || u.role === 'user';
+    const badgeCls = u.role === 'admin' ? 'badge-admin' : u.role === 'user' ? 'badge-user' : 'badge-custom';
+    return `
     <tr>
       <td>${esc(u.email)}</td>
       <td>${esc(u.name)}</td>
-      <td><span class="badge badge-${u.role}">${esc(u.role)}</span></td>
+      <td>
+        <span class="badge ${badgeCls}" id="role-badge-${u.id}">${esc(u.role)}</span>
+        <input class="role-input" id="role-input-${u.id}" value="${esc(u.role)}" style="display:none"
+               onkeydown="if(event.key==='Enter')saveRole(${u.id})">
+        <button class="role-save" id="role-edit-btn-${u.id}" onclick="editRole(${u.id})">edit</button>
+        <button class="role-save" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">save</button>
+      </td>
       <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}</td>
       <td>
-        ${u.role === 'admin'
-          ? `<button onclick="setRole(${u.id},'user')">demote</button>`
-          : `<button onclick="setRole(${u.id},'admin')">promote</button>`
-        }
         <button class="danger" onclick="delUser(${u.id},'${esc(u.email)}')">delete</button>
       </td>
     </tr>
-  `).join('');
+  `}).join('');
 }
 
-async function setRole(id, role) {
+function editRole(id) {
+  document.getElementById('role-badge-' + id).style.display = 'none';
+  document.getElementById('role-input-' + id).style.display = '';
+  document.getElementById('role-edit-btn-' + id).style.display = 'none';
+  document.getElementById('role-save-btn-' + id).style.display = '';
+  document.getElementById('role-input-' + id).focus();
+  document.getElementById('role-input-' + id).select();
+}
+
+async function saveRole(id) {
+  const role = document.getElementById('role-input-' + id).value.trim();
+  if (!role) { showMsg('role must not be empty', false); return; }
   await fetch(`/api/admin/users/${id}/role`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
   showMsg('role updated'); loadUsers();
 }
+
 async function delUser(id, email) {
   if (!confirm(`Delete user ${email}?`)) return;
   await fetch(`/api/admin/users/${id}`, {method:'DELETE'});

@@ -354,9 +354,9 @@ async def update_user_role(request: Request, user_id: int):
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
     body = await request.json()
-    new_role = body.get("role", "user")
-    if new_role not in ("admin", "user"):
-        return JSONResponse({"error": "invalid role"}, status_code=400)
+    new_role = body.get("role", "user").strip()
+    if not new_role:
+        return JSONResponse({"error": "role must not be empty"}, status_code=400)
     with db_cursor() as cur:
         cur.execute("UPDATE home_users SET role = %s WHERE id = %s", (new_role, user_id))
     return {"ok": True}

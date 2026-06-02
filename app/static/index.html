@@ -87,6 +87,9 @@
     .badge-denied {
       background: #ef4444; color: #fff;
     }
+    .badge-role {
+      background: #f59e0b; color: #fff;
+    }
   </style>
 </head>
 <body>
@@ -140,7 +143,7 @@ async function loadServices() {
       const isDenied = s.access === 'denied';
       const disabled = !canAccess && s.url;
       const badge = isUnauth ? '<span class="badge badge-login">需要登录</span>'
-                  : isDenied ? '<span class="badge badge-denied">联系管理员申请权限</span>'
+                  : isDenied ? '<span class="badge badge-role">权限不足</span>'
                   : '';
       return `
         <a class="card ${disabled ? 'disabled' : ''}" href="${canAccess ? esc(s.url) : '#'}" target="_blank" rel="noopener"

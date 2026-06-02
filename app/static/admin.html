@@ -13,6 +13,7 @@
     .back { font-size: 13px; color: var(--text-muted); text-decoration: none; }
     .back:hover { color: var(--text); }
     h2 { font-size: 15px; font-weight: 600; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-subtle); margin-left: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { text-align: left; padding: 8px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); }
     td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
@@ -46,6 +47,18 @@
   <div id="panel" style="display:none">
     <div id="msg" class="msg"></div>
 
+    <!-- Role ACL -->
+    <h2>Role Access <span class="hint">按角色批量授权，优先于用户级规则</span></h2>
+    <div class="form-row">
+      <input id="racl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
+      <input id="racl-role" placeholder="role (e.g. user)">
+      <button onclick="addRoleAcl()">Add</button>
+    </div>
+    <table>
+      <thead><tr><th>Domain</th><th>Role</th><th>Enabled</th><th></th></tr></thead>
+      <tbody id="racl-body"></tbody>
+    </table>
+
     <!-- Users -->
     <h2>Users</h2>
     <table>
@@ -53,8 +66,8 @@
       <tbody id="users-body"></tbody>
     </table>
 
-    <!-- ACL -->
-    <h2>Access Control</h2>
+    <!-- ACL (per-user) -->
+    <h2>User Access <span class="hint">单个用户授权，仅当 Role ACL 不匹配时生效</span></h2>
     <div class="form-row">
       <input id="acl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
       <input id="acl-email" placeholder="email (e.g. *@feng.moe)">
@@ -80,8 +93,43 @@ async function init() {
   const u = await r.json();
   if (!u.authenticated || u.role !== 'admin') { document.getElementById('denied').style.display='block'; return; }
   document.getElementById('panel').style.display='block';
-  loadUsers(); loadAcl();
+  loadRoleAcl(); loadUsers(); loadAcl();
 }
+
+// ── Role ACL ──
+
+async function loadRoleAcl() {
+  const r = await fetch('/api/admin/role-acl');
+  if (!r.ok) return;
+  const rules = await r.json();
+  document.getElementById('racl-body').innerHTML = rules.map(r => `
+    <tr>
+      <td><code>${esc(r.domain)}</code></td>
+      <td><span class="badge badge-${r.role === 'admin' ? 'admin' : 'user'}">${esc(r.role)}</span></td>
+      <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? '✅' : '⬜'}</td>
+      <td><button class="danger" onclick="delRoleAcl(${r.id})">delete</button></td>
+    </tr>
+  `).join('');
+}
+
+async function addRoleAcl() {
+  const domain = document.getElementById('racl-domain').value.trim();
+  const role = document.getElementById('racl-role').value.trim();
+  if (!domain || !role) { showMsg('domain and role required', false); return; }
+  const r = await fetch('/api/admin/role-acl', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain,role})});
+  if (r.ok) { showMsg('role rule added'); document.getElementById('racl-domain').value=''; document.getElementById('racl-role').value=''; loadRoleAcl(); }
+  else { const e = await r.json(); showMsg(e.error || 'failed', false); }
+}
+async function toggleRoleAcl(id, enabled) {
+  await fetch(`/api/admin/role-acl/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
+  loadRoleAcl();
+}
+async function delRoleAcl(id) {
+  await fetch(`/api/admin/role-acl/${id}`, {method:'DELETE'});
+  showMsg('role rule deleted'); loadRoleAcl();
+}
+
+// ── Users ──
 
 async function loadUsers() {
   const r = await fetch('/api/admin/users');
@@ -113,6 +161,8 @@ async function delUser(id, email) {
   await fetch(`/api/admin/users/${id}`, {method:'DELETE'});
   showMsg('user deleted'); loadUsers();
 }
+
+// ── Per-user ACL ──
 
 async function loadAcl() {
   const r = await fetch('/api/admin/acl');

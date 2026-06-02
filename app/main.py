@@ -101,7 +101,7 @@ def list_services(request: Request):
             d["access"] = "unauthenticated"
         elif not s.host:
             d["access"] = "allowed"
-        elif _check_acl(user["email"], s.host):
+        elif _check_acl(user["email"], s.host, user.get("role", "user")):
             d["access"] = "allowed"
         else:
             d["access"] = "denied"

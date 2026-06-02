@@ -131,8 +131,22 @@ def _get_current_user(request: Request) -> Optional[dict]:
     return dict(user) if user else None
 
 
-def _check_acl(email: str, host: str) -> bool:
-    """Check if email is allowed to access host via home_acl table."""
+def _check_acl(email: str, host: str, role: str = "user") -> bool:
+    """Check if user is allowed to access host via role ACL then email ACL.
+    
+    Priority:
+    1. home_role_acl — match by (domain, role), role-level bulk authorization
+    2. home_acl — match by (domain, email), per-user fine-grained override
+    """
+    # 1. Check role ACL first
+    with db_cursor() as cur:
+        cur.execute("SELECT domain, role FROM home_role_acl WHERE enabled = TRUE")
+        role_rules = cur.fetchall()
+    for rule in role_rules:
+        if fnmatch(host, rule["domain"]) and fnmatch(role, rule["role"]):
+            return True
+
+    # 2. Fall back to per-email ACL
     with db_cursor() as cur:
         cur.execute("SELECT domain, email FROM home_acl WHERE enabled = TRUE")
         rules = cur.fetchall()
@@ -292,7 +306,7 @@ async def auth_verify(request: Request, response: Response):
         ), status_code=401)
 
     # Check ACL
-    if not _check_acl(user["email"], forwarded_host):
+    if not _check_acl(user["email"], forwarded_host, user.get("role", "user")):
         return HTMLResponse(_error_page(
             title="无权访问",
             icon="🚫",
@@ -410,4 +424,64 @@ async def delete_acl(request: Request, rule_id: int):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     with db_cursor() as cur:
         cur.execute("DELETE FROM home_acl WHERE id = %s", (rule_id,))
+    return {"ok": True}
+
+
+# ── Role ACL Admin API ──────────────────────────────────
+
+@router.get("/api/admin/role-acl")
+async def list_role_acl(request: Request):
+    if not _require_admin(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("SELECT id, domain, role, enabled, created_at FROM home_role_acl ORDER BY id")
+        rules = [dict(r) for r in cur.fetchall()]
+    for r in rules:
+        if r["created_at"]:
+            r["created_at"] = r["created_at"].isoformat()
+    return rules
+
+
+@router.post("/api/admin/role-acl")
+async def create_role_acl(request: Request):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    domain = body.get("domain", "").strip()
+    role = body.get("role", "").strip()
+    if not domain or not role:
+        return JSONResponse({"error": "domain and role required"}, status_code=400)
+    with db_cursor() as cur:
+        cur.execute(
+            "INSERT INTO home_role_acl (domain, role) VALUES (%s, %s) RETURNING id",
+            (domain, role),
+        )
+        rule_id = cur.fetchone()["id"]
+    return {"id": rule_id, "domain": domain, "role": role, "enabled": True}
+
+
+@router.put("/api/admin/role-acl/{rule_id}")
+async def update_role_acl(request: Request, rule_id: int):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    with db_cursor() as cur:
+        if "enabled" in body:
+            cur.execute("UPDATE home_role_acl SET enabled = %s WHERE id = %s", (body["enabled"], rule_id))
+        if "domain" in body:
+            cur.execute("UPDATE home_role_acl SET domain = %s WHERE id = %s", (body["domain"], rule_id))
+        if "role" in body:
+            cur.execute("UPDATE home_role_acl SET role = %s WHERE id = %s", (body["role"], rule_id))
+    return {"ok": True}
+
+
+@router.delete("/api/admin/role-acl/{rule_id}")
+async def delete_role_acl(request: Request, rule_id: int):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM home_role_acl WHERE id = %s", (rule_id,))
     return {"ok": True}

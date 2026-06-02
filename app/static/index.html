@@ -39,12 +39,14 @@
     .announcement.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
     .announcement.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
     .announcement.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    :root[data-theme="dark"] .announcement.info,
-    :root:not([data-theme="light"]) .announcement.info { background: #172554; color: #93c5fd; border-color: #1e3a5f; }
-    :root[data-theme="dark"] .announcement.warn,
-    :root:not([data-theme="light"]) .announcement.warn { background: #451a03; color: #fbbf24; border-color: #78350f; }
-    :root[data-theme="dark"] .announcement.error,
-    :root:not([data-theme="light"]) .announcement.error { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme]) .announcement.info { background: #172554; color: #93c5fd; border-color: #1e3a5f; }
+      :root:not([data-theme]) .announcement.warn { background: #451a03; color: #fbbf24; border-color: #78350f; }
+      :root:not([data-theme]) .announcement.error { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
+    }
+    :root[data-theme="dark"] .announcement.info { background: #172554; color: #93c5fd; border-color: #1e3a5f; }
+    :root[data-theme="dark"] .announcement.warn { background: #451a03; color: #fbbf24; border-color: #78350f; }
+    :root[data-theme="dark"] .announcement.error { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
     .announcement .dismiss { margin-left: auto; cursor: pointer; opacity: .6; font-size: 16px; }
 
     .grid {
@@ -59,8 +61,8 @@
       transition: background .15s, border-color .15s; position: relative;
     }
     .card:hover { background: var(--hover-bg); border-color: #d4d4d4; }
-    :root[data-theme="dark"] .card:hover,
-    :root:not([data-theme="light"]) .card:hover { border-color: #404040; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme]) .card:hover { border-color: #404040; } }
+    :root[data-theme="dark"] .card:hover { border-color: #404040; }
     .card .icon { font-size: 28px; line-height: 1; flex-shrink: 0; width: 36px; text-align: center; }
     .card .meta { flex: 1; min-width: 0; }
     .card .meta h3 { font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

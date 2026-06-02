@@ -131,11 +131,19 @@
 
 <script>
 const msg = document.getElementById('msg');
+let csrfToken = '';
 function showMsg(text, ok=true) {
   msg.textContent = text; msg.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err'); msg.style.display='block';
   setTimeout(() => msg.style.display='none', 3000);
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function apiFetch(url, opts = {}) {
+  const method = (opts.method || 'GET').toUpperCase();
+  if (method !== 'GET' && csrfToken) {
+    opts.headers = { ...(opts.headers || {}), 'X-CSRF-Token': csrfToken };
+  }
+  return fetch(url, opts);
+}
 
 // ── Tab switching ──
 const tabs = document.querySelectorAll('.tab');
@@ -167,6 +175,7 @@ async function init() {
   if (!r.ok) { document.getElementById('denied').style.display='block'; return; }
   const u = await r.json();
   if (!u.authenticated || u.role !== 'admin') { document.getElementById('denied').style.display='block'; return; }
+  csrfToken = u.csrf || '';
   document.getElementById('panel').style.display='block';
   // Load first tab, then switch to hash if present
   loadRoleAcl();
@@ -176,7 +185,7 @@ async function init() {
 // ── Role ACL ──
 
 async function loadRoleAcl() {
-  const r = await fetch('/api/admin/role-acl');
+  const r = await apiFetch('/api/admin/role-acl');
   if (!r.ok) return;
   const rules = await r.json();
   document.getElementById('racl-body').innerHTML = rules.map(r => `
@@ -193,23 +202,23 @@ async function addRoleAcl() {
   const domain = document.getElementById('racl-domain').value.trim();
   const role = document.getElementById('racl-role').value.trim();
   if (!domain || !role) { showMsg('domain and role required', false); return; }
-  const r = await fetch('/api/admin/role-acl', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain,role})});
+  const r = await apiFetch('/api/admin/role-acl', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain,role})});
   if (r.ok) { showMsg('role rule added'); document.getElementById('racl-domain').value=''; document.getElementById('racl-role').value=''; loadRoleAcl(); }
   else { const e = await r.json(); showMsg(e.error || 'failed', false); }
 }
 async function toggleRoleAcl(id, enabled) {
-  await fetch(`/api/admin/role-acl/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
+  await apiFetch(`/api/admin/role-acl/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
   loadRoleAcl();
 }
 async function delRoleAcl(id) {
-  await fetch(`/api/admin/role-acl/${id}`, {method:'DELETE'});
+  await apiFetch(`/api/admin/role-acl/${id}`, {method:'DELETE'});
   showMsg('role rule deleted'); loadRoleAcl();
 }
 
 // ── Role Presets ──
 
 async function loadPresets() {
-  const r = await fetch('/api/admin/role-presets');
+  const r = await apiFetch('/api/admin/role-presets');
   if (!r.ok) return;
   const presets = await r.json();
   document.getElementById('presets-body').innerHTML = presets.map(p => {
@@ -241,7 +250,7 @@ function editPreset(id) {
 async function savePreset(id) {
   const role = document.getElementById('preset-input-' + id).value.trim();
   if (!role) { showMsg('role must not be empty', false); return; }
-  await fetch(`/api/admin/role-presets/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
+  await apiFetch(`/api/admin/role-presets/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
   showMsg('preset updated'); loadPresets();
 }
 
@@ -249,21 +258,21 @@ async function addPreset() {
   const email = document.getElementById('preset-email').value.trim();
   const role = document.getElementById('preset-role').value.trim();
   if (!email || !role) { showMsg('email and role required', false); return; }
-  const r = await fetch('/api/admin/role-presets', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,role})});
+  const r = await apiFetch('/api/admin/role-presets', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,role})});
   if (r.ok) { showMsg('preset added'); document.getElementById('preset-email').value=''; document.getElementById('preset-role').value=''; loadPresets(); }
   else { const e = await r.json(); showMsg(e.error || 'failed', false); }
 }
 
 async function delPreset(id, email) {
   if (!confirm(`Delete preset for ${email}?`)) return;
-  await fetch(`/api/admin/role-presets/${id}`, {method:'DELETE'});
+  await apiFetch(`/api/admin/role-presets/${id}`, {method:'DELETE'});
   showMsg('preset deleted'); loadPresets();
 }
 
 // ── Users ──
 
 async function loadUsers() {
-  const r = await fetch('/api/admin/users');
+  const r = await apiFetch('/api/admin/users');
   if (!r.ok) return;
   const users = await r.json();
   document.getElementById('users-body').innerHTML = users.map(u => {
@@ -299,20 +308,20 @@ function editRole(id) {
 async function saveRole(id) {
   const role = document.getElementById('role-input-' + id).value.trim();
   if (!role) { showMsg('role must not be empty', false); return; }
-  await fetch(`/api/admin/users/${id}/role`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
+  await apiFetch(`/api/admin/users/${id}/role`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
   showMsg('role updated'); loadUsers();
 }
 
 async function delUser(id, email) {
   if (!confirm(`Delete user ${email}?`)) return;
-  await fetch(`/api/admin/users/${id}`, {method:'DELETE'});
+  await apiFetch(`/api/admin/users/${id}`, {method:'DELETE'});
   showMsg('user deleted'); loadUsers();
 }
 
 // ── Per-user ACL ──
 
 async function loadAcl() {
-  const r = await fetch('/api/admin/acl');
+  const r = await apiFetch('/api/admin/acl');
   if (!r.ok) return;
   const rules = await r.json();
   document.getElementById('acl-body').innerHTML = rules.map(r => `
@@ -329,16 +338,16 @@ async function addAcl() {
   const domain = document.getElementById('acl-domain').value.trim();
   const email = document.getElementById('acl-email').value.trim();
   if (!domain || !email) { showMsg('domain and email required', false); return; }
-  const r = await fetch('/api/admin/acl', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain,email})});
+  const r = await apiFetch('/api/admin/acl', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain,email})});
   if (r.ok) { showMsg('rule added'); document.getElementById('acl-domain').value=''; document.getElementById('acl-email').value=''; loadAcl(); }
   else showMsg('failed', false);
 }
 async function toggleAcl(id, enabled) {
-  await fetch(`/api/admin/acl/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
+  await apiFetch(`/api/admin/acl/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
   loadAcl();
 }
 async function delAcl(id) {
-  await fetch(`/api/admin/acl/${id}`, {method:'DELETE'});
+  await apiFetch(`/api/admin/acl/${id}`, {method:'DELETE'});
   showMsg('rule deleted'); loadAcl();
 }
 

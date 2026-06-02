@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import html
+import logging
 import secrets
 import time
 from datetime import datetime, timedelta, timezone
@@ -14,11 +15,14 @@ from urllib.parse import urlencode, quote
 import httpx
 from fastapi import APIRouter, Cookie, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from . import config
 from .db import db_cursor
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 
 # ── Google OAuth endpoints ──────────────────────────────
 
@@ -116,6 +120,22 @@ def _verify_session_token(token: str) -> Optional[dict]:
     return {"user_id": user_id, "email": email}
 
 
+# ── CSRF Protection ────────────────────────────────────
+
+def _csrf_token(session_token: str) -> str:
+    """Derive a deterministic CSRF token from the session token."""
+    return hmac.new(
+        config.SECRET.encode(),
+        f"csrf:{session_token}".encode(),
+        hashlib.sha256,
+    ).hexdigest()[:32]
+
+
+def _get_csrf_header(request: Request) -> str:
+    """Read CSRF token from X-CSRF-Token header."""
+    return request.headers.get("X-CSRF-Token", "")
+
+
 def _get_current_user(request: Request) -> Optional[dict]:
     """Extract user from session cookie."""
     token = request.cookies.get(config.COOKIE)
@@ -178,6 +198,7 @@ async def auth_login(request: Request):
 
 
 @router.get("/auth/callback")
+@limiter.limit("10/minute")
 async def auth_callback(request: Request, code: str = "", state: str = ""):
     """Handle Google OAuth callback."""
     if not code:
@@ -198,7 +219,6 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
             "grant_type": "authorization_code",
         })
         if token_resp.status_code != 200:
-            import logging
             logging.error("Token exchange failed: %s %s", token_resp.status_code, token_resp.text)
             return HTMLResponse(f"<h1>Token exchange failed</h1><pre>{token_resp.text}</pre>", status_code=400)
 
@@ -275,7 +295,8 @@ async def auth_me(request: Request):
     user = _get_current_user(request)
     if not user:
         return JSONResponse({"authenticated": False}, status_code=401)
-    return {"authenticated": True, **user}
+    token = request.cookies.get(config.COOKIE, "")
+    return {"authenticated": True, "csrf": _csrf_token(token), **user}
 
 
 # ── Traefik ForwardAuth ─────────────────────────────────
@@ -339,6 +360,14 @@ def _require_admin(request: Request) -> Optional[dict]:
     user = _get_current_user(request)
     if not user or user.get("role") != "admin":
         return None
+    # CSRF check for state-changing methods
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        session_token = request.cookies.get(config.COOKIE, "")
+        expected = _csrf_token(session_token)
+        provided = _get_csrf_header(request)
+        if not provided or not hmac.compare_digest(provided, expected):
+            logging.warning("CSRF mismatch from %s on %s", user["email"], request.url.path)
+            return None
     return user
 
 
@@ -357,6 +386,7 @@ async def list_users(request: Request):
 
 
 @router.post("/api/admin/users/{user_id}/role")
+@limiter.limit("30/minute")
 async def update_user_role(request: Request, user_id: int):
     admin = _require_admin(request)
     if not admin:
@@ -371,6 +401,7 @@ async def update_user_role(request: Request, user_id: int):
 
 
 @router.delete("/api/admin/users/{user_id}")
+@limiter.limit("10/minute")
 async def delete_user(request: Request, user_id: int):
     admin = _require_admin(request)
     if not admin:

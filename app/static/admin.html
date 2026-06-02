@@ -3,70 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/common.css">
   <title>admin — home</title>
   <style>
-    :root { --bg: #fafafa; --card-bg: #fff; --border: #e5e7eb; --text: #171717; --text-muted: #737373; --text-subtle: #a3a3a3; --hover-bg: #f5f5f5; --radius: 10px; --danger: #ef4444; --success: #22c55e; --primary: #3b82f6; }
-    @media (prefers-color-scheme: dark) { :root { --bg: #0a0a0a; --card-bg: #171717; --border: #262626; --text: #fafafa; --text-muted: #a3a3a3; --text-subtle: #525252; --hover-bg: #1a1a1a; --danger: #f87171; --primary: #60a5fa; } }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 24px; max-width: 800px; margin: 0 auto; }
+    body { padding: 24px; max-width: 800px; margin: 0 auto; }
     h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
-    .back { font-size: 13px; color: var(--text-muted); text-decoration: none; }
+    .back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 8px; }
     .back:hover { color: var(--text); }
-
-    /* ── Tabs ── */
-    .tabs { display: flex; gap: 0; margin: 16px 0 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+    .tabs { display: flex; gap: 0; margin: 16px 0 0; border-bottom: 1px solid var(--border); border-radius: 0; overflow-x: auto; }
     .tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; border-radius: 0; transition: color .15s, border-color .15s; white-space: nowrap; }
     .tab:hover { color: var(--text); }
     .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-
-    /* ── Sections ── */
     .section { display: none; }
     .section.active { display: block; }
     h2 { font-size: 15px; font-weight: 600; margin: 20px 0 12px; }
     h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-subtle); margin-left: 8px; }
-
-    /* ── Table ── */
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { text-align: left; padding: 8px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
+    th { text-align: left; padding: 8px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
     td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
     tr:hover td { background: var(--hover-bg); }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
-    .badge-admin { background: #dbeafe; color: #1d4ed8; }
-    .badge-user { background: #f3f4f6; color: #6b7280; }
-    .badge-custom { background: #fef3c7; color: #92400e; }
-    @media (prefers-color-scheme: dark) { .badge-admin { background: #1e3a5f; color: #93c5fd; } .badge-user { background: #262626; color: #a3a3a3; } .badge-custom { background: #422006; color: #fbbf24; } }
-    button { padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); font-size: 12px; cursor: pointer; }
-    button:hover { background: var(--hover-bg); }
-    button.danger { color: var(--danger); border-color: var(--danger); }
-    button.danger:hover { background: #fef2f2; }
-    @media (prefers-color-scheme: dark) { button.danger:hover { background: #2a1010; } }
     .role-input { width: 80px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--card-bg); color: var(--text); font-size: 12px; font-family: inherit; }
     .role-input:focus { outline: none; border-color: #94a3b8; }
     .role-save { padding: 2px 8px; font-size: 11px; }
-    .form-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
-    .form-row input, .form-row select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); font-size: 13px; flex: 1; }
+    .form-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+    .form-row input, .form-row select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); font-size: 13px; flex: 1; min-width: 120px; }
     .form-row input:focus, .form-row select:focus { outline: none; border-color: #94a3b8; }
     .toggle { cursor: pointer; }
-    .msg { padding: 8px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; display: none; }
-    .msg-ok { background: #f0fdf4; color: #166534; }
-    .msg-err { background: #fef2f2; color: #991b1b; }
-    @media (prefers-color-scheme: dark) { .msg-ok { background: #052e16; } .msg-err { background: #2a1010; } }
     #denied { text-align: center; padding: 80px 24px; color: var(--text-muted); }
-
-    /* ── Mobile tabs scroll ── */
+    .audit-time { color: var(--text-subtle); font-size: 11px; white-space: nowrap; }
+    .audit-action { font-weight: 500; }
     @media (max-width: 480px) {
-      .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-      .tab { padding: 10px 12px; font-size: 12px; }
       body { padding: 16px; }
+      .tab { padding: 10px 12px; font-size: 12px; }
     }
   </style>
 </head>
 <body>
   <a href="/" class="back">← back</a>
   <h1>admin</h1>
-  <div id="denied" style="display:none">
-    <p>access denied</p>
-  </div>
+  <div id="denied" style="display:none"><p>access denied</p></div>
   <div id="panel" style="display:none">
     <div id="msg" class="msg"></div>
 
@@ -75,6 +53,8 @@
       <button class="tab" data-tab="presets">Role Presets</button>
       <button class="tab" data-tab="users">Users</button>
       <button class="tab" data-tab="user-acl">User Access</button>
+      <button class="tab" data-tab="announcements">公告</button>
+      <button class="tab" data-tab="audit">审计日志</button>
     </div>
 
     <!-- Role ACL -->
@@ -85,10 +65,10 @@
         <input id="racl-role" placeholder="role (e.g. user)">
         <button onclick="addRoleAcl()">Add</button>
       </div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Domain</th><th>Role</th><th>Enabled</th><th></th></tr></thead>
         <tbody id="racl-body"></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- Role Presets -->
@@ -99,19 +79,19 @@
         <input id="preset-role" placeholder="role (e.g. friend)">
         <button onclick="addPreset()">Add</button>
       </div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
         <tbody id="presets-body"></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- Users -->
     <div class="section" id="sec-users">
       <h2>Users</h2>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Last Login</th><th></th></tr></thead>
         <tbody id="users-body"></tbody>
-      </table>
+      </table></div>
     </div>
 
     <!-- ACL (per-user) -->
@@ -122,27 +102,43 @@
         <input id="acl-email" placeholder="email (e.g. *@feng.moe)">
         <button onclick="addAcl()">Add</button>
       </div>
-      <table>
+      <div class="table-wrap"><table>
         <thead><tr><th>Domain</th><th>Email</th><th>Enabled</th><th></th></tr></thead>
         <tbody id="acl-body"></tbody>
-      </table>
+      </table></div>
+    </div>
+
+    <!-- Announcements -->
+    <div class="section" id="sec-announcements">
+      <h2>公告管理 <span class="hint">发布的公告会在主页顶部显示</span></h2>
+      <div class="form-row">
+        <input id="ann-message" placeholder="公告内容">
+        <select id="ann-level"><option value="info">信息</option><option value="warn">警告</option><option value="error">紧急</option></select>
+        <button onclick="addAnnouncement()">发布</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>内容</th><th>级别</th><th>状态</th><th>时间</th><th></th></tr></thead>
+        <tbody id="ann-body"></tbody>
+      </table></div>
+    </div>
+
+    <!-- Audit Log -->
+    <div class="section" id="sec-audit">
+      <h2>审计日志 <span class="hint">记录所有管理操作</span></h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>时间</th><th>操作者</th><th>操作</th><th>目标</th><th>详情</th></tr></thead>
+        <tbody id="audit-body"></tbody>
+      </table></div>
     </div>
   </div>
 
+<script src="/common.js"></script>
 <script>
 const msg = document.getElementById('msg');
-let csrfToken = '';
+window.csrfToken = '';
 function showMsg(text, ok=true) {
   msg.textContent = text; msg.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err'); msg.style.display='block';
   setTimeout(() => msg.style.display='none', 3000);
-}
-function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-function apiFetch(url, opts = {}) {
-  const method = (opts.method || 'GET').toUpperCase();
-  if (method !== 'GET' && csrfToken) {
-    opts.headers = { ...(opts.headers || {}), 'X-CSRF-Token': csrfToken };
-  }
-  return fetch(url, opts);
 }
 
 // ── Tab switching ──
@@ -154,14 +150,12 @@ tabs.forEach(tab => {
     sections.forEach(s => s.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('sec-' + tab.dataset.tab).classList.add('active');
-    // Lazy-load data for the tab
-    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl };
+    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl, 'announcements': loadAnnouncements, 'audit': loadAudit };
     const fn = loaders[tab.dataset.tab];
     if (fn) fn();
   });
 });
 
-// ── URL hash routing ──
 function switchToHash() {
   const hash = location.hash.replace('#', '');
   if (!hash) return;
@@ -171,19 +165,17 @@ function switchToHash() {
 window.addEventListener('hashchange', switchToHash);
 
 async function init() {
-  const r = await fetch('/api/me');
+  const r = await apiFetch('/api/me');
   if (!r.ok) { document.getElementById('denied').style.display='block'; return; }
   const u = await r.json();
   if (!u.authenticated || u.role !== 'admin') { document.getElementById('denied').style.display='block'; return; }
-  csrfToken = u.csrf || '';
+  window.csrfToken = u.csrf || '';
   document.getElementById('panel').style.display='block';
-  // Load first tab, then switch to hash if present
   loadRoleAcl();
   switchToHash();
 }
 
 // ── Role ACL ──
-
 async function loadRoleAcl() {
   const r = await apiFetch('/api/admin/role-acl');
   if (!r.ok) return;
@@ -197,7 +189,6 @@ async function loadRoleAcl() {
     </tr>
   `).join('');
 }
-
 async function addRoleAcl() {
   const domain = document.getElementById('racl-domain').value.trim();
   const role = document.getElementById('racl-role').value.trim();
@@ -216,44 +207,38 @@ async function delRoleAcl(id) {
 }
 
 // ── Role Presets ──
-
 async function loadPresets() {
   const r = await apiFetch('/api/admin/role-presets');
   if (!r.ok) return;
   const presets = await r.json();
   document.getElementById('presets-body').innerHTML = presets.map(p => {
     const badgeCls = p.role === 'admin' ? 'badge-admin' : p.role === 'user' ? 'badge-user' : 'badge-custom';
-    return `
-    <tr>
+    return `<tr>
       <td>${esc(p.email)}</td>
       <td>
         <span class="badge ${badgeCls}" id="preset-badge-${p.id}">${esc(p.role)}</span>
-        <input class="role-input" id="preset-input-${p.id}" value="${esc(p.role)}" style="display:none"
-               onkeydown="if(event.key==='Enter')savePreset(${p.id})">
+        <input class="role-input" id="preset-input-${p.id}" value="${esc(p.role)}" style="display:none" onkeydown="if(event.key==='Enter')savePreset(${p.id})">
         <button class="role-save" id="preset-edit-btn-${p.id}" onclick="editPreset(${p.id})">edit</button>
         <button class="role-save" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">save</button>
       </td>
       <td><button class="danger" onclick="delPreset(${p.id},'${esc(p.email)}')">delete</button></td>
-    </tr>
-  `}).join('');
+    </tr>`;
+  }).join('');
 }
-
 function editPreset(id) {
-  document.getElementById('preset-badge-' + id).style.display = 'none';
-  document.getElementById('preset-input-' + id).style.display = '';
-  document.getElementById('preset-edit-btn-' + id).style.display = 'none';
-  document.getElementById('preset-save-btn-' + id).style.display = '';
-  document.getElementById('preset-input-' + id).focus();
-  document.getElementById('preset-input-' + id).select();
+  document.getElementById('preset-badge-'+id).style.display='none';
+  document.getElementById('preset-input-'+id).style.display='';
+  document.getElementById('preset-edit-btn-'+id).style.display='none';
+  document.getElementById('preset-save-btn-'+id).style.display='';
+  document.getElementById('preset-input-'+id).focus();
+  document.getElementById('preset-input-'+id).select();
 }
-
 async function savePreset(id) {
-  const role = document.getElementById('preset-input-' + id).value.trim();
+  const role = document.getElementById('preset-input-'+id).value.trim();
   if (!role) { showMsg('role must not be empty', false); return; }
   await apiFetch(`/api/admin/role-presets/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
   showMsg('preset updated'); loadPresets();
 }
-
 async function addPreset() {
   const email = document.getElementById('preset-email').value.trim();
   const role = document.getElementById('preset-role').value.trim();
@@ -262,7 +247,6 @@ async function addPreset() {
   if (r.ok) { showMsg('preset added'); document.getElementById('preset-email').value=''; document.getElementById('preset-role').value=''; loadPresets(); }
   else { const e = await r.json(); showMsg(e.error || 'failed', false); }
 }
-
 async function delPreset(id, email) {
   if (!confirm(`Delete preset for ${email}?`)) return;
   await apiFetch(`/api/admin/role-presets/${id}`, {method:'DELETE'});
@@ -270,48 +254,40 @@ async function delPreset(id, email) {
 }
 
 // ── Users ──
-
 async function loadUsers() {
   const r = await apiFetch('/api/admin/users');
   if (!r.ok) return;
   const users = await r.json();
   document.getElementById('users-body').innerHTML = users.map(u => {
     const badgeCls = u.role === 'admin' ? 'badge-admin' : u.role === 'user' ? 'badge-user' : 'badge-custom';
-    return `
-    <tr>
+    return `<tr>
       <td>${esc(u.email)}</td>
       <td>${esc(u.name)}</td>
       <td>
         <span class="badge ${badgeCls}" id="role-badge-${u.id}">${esc(u.role)}</span>
-        <input class="role-input" id="role-input-${u.id}" value="${esc(u.role)}" style="display:none"
-               onkeydown="if(event.key==='Enter')saveRole(${u.id})">
+        <input class="role-input" id="role-input-${u.id}" value="${esc(u.role)}" style="display:none" onkeydown="if(event.key==='Enter')saveRole(${u.id})">
         <button class="role-save" id="role-edit-btn-${u.id}" onclick="editRole(${u.id})">edit</button>
         <button class="role-save" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">save</button>
       </td>
       <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}</td>
-      <td>
-        <button class="danger" onclick="delUser(${u.id},'${esc(u.email)}')">delete</button>
-      </td>
-    </tr>
-  `}).join('');
+      <td><button class="danger" onclick="delUser(${u.id},'${esc(u.email)}')">delete</button></td>
+    </tr>`;
+  }).join('');
 }
-
 function editRole(id) {
-  document.getElementById('role-badge-' + id).style.display = 'none';
-  document.getElementById('role-input-' + id).style.display = '';
-  document.getElementById('role-edit-btn-' + id).style.display = 'none';
-  document.getElementById('role-save-btn-' + id).style.display = '';
-  document.getElementById('role-input-' + id).focus();
-  document.getElementById('role-input-' + id).select();
+  document.getElementById('role-badge-'+id).style.display='none';
+  document.getElementById('role-input-'+id).style.display='';
+  document.getElementById('role-edit-btn-'+id).style.display='none';
+  document.getElementById('role-save-btn-'+id).style.display='';
+  document.getElementById('role-input-'+id).focus();
+  document.getElementById('role-input-'+id).select();
 }
-
 async function saveRole(id) {
-  const role = document.getElementById('role-input-' + id).value.trim();
+  const role = document.getElementById('role-input-'+id).value.trim();
   if (!role) { showMsg('role must not be empty', false); return; }
   await apiFetch(`/api/admin/users/${id}/role`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
   showMsg('role updated'); loadUsers();
 }
-
 async function delUser(id, email) {
   if (!confirm(`Delete user ${email}?`)) return;
   await apiFetch(`/api/admin/users/${id}`, {method:'DELETE'});
@@ -319,21 +295,17 @@ async function delUser(id, email) {
 }
 
 // ── Per-user ACL ──
-
 async function loadAcl() {
   const r = await apiFetch('/api/admin/acl');
   if (!r.ok) return;
   const rules = await r.json();
-  document.getElementById('acl-body').innerHTML = rules.map(r => `
-    <tr>
-      <td>${esc(r.domain)}</td>
-      <td>${esc(r.email)}</td>
-      <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? '✅' : '⬜'}</td>
-      <td><button class="danger" onclick="delAcl(${r.id})">delete</button></td>
-    </tr>
-  `).join('');
+  document.getElementById('acl-body').innerHTML = rules.map(r => `<tr>
+    <td>${esc(r.domain)}</td>
+    <td>${esc(r.email)}</td>
+    <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? '✅' : '⬜'}</td>
+    <td><button class="danger" onclick="delAcl(${r.id})">delete</button></td>
+  </tr>`).join('');
 }
-
 async function addAcl() {
   const domain = document.getElementById('acl-domain').value.trim();
   const email = document.getElementById('acl-email').value.trim();
@@ -349,6 +321,51 @@ async function toggleAcl(id, enabled) {
 async function delAcl(id) {
   await apiFetch(`/api/admin/acl/${id}`, {method:'DELETE'});
   showMsg('rule deleted'); loadAcl();
+}
+
+// ── Announcements ──
+async function loadAnnouncements() {
+  const r = await apiFetch('/api/admin/announcements');
+  if (!r.ok) return;
+  const items = await r.json();
+  const levelLabel = {info:'信息', warn:'警告', error:'紧急'};
+  document.getElementById('ann-body').innerHTML = items.map(a => `<tr>
+    <td>${esc(a.message)}</td>
+    <td><span class="badge badge-${a.level === 'error' ? 'admin' : a.level === 'warn' ? 'custom' : 'user'}">${levelLabel[a.level] || a.level}</span></td>
+    <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? '✅' : '⬜'}</td>
+    <td class="audit-time">${new Date(a.created_at).toLocaleString()}</td>
+    <td><button class="danger" onclick="delAnnouncement(${a.id})">delete</button></td>
+  </tr>`).join('');
+}
+async function addAnnouncement() {
+  const message = document.getElementById('ann-message').value.trim();
+  const level = document.getElementById('ann-level').value;
+  if (!message) { showMsg('message required', false); return; }
+  const r = await apiFetch('/api/admin/announcements', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message, level})});
+  if (r.ok) { showMsg('公告已发布'); document.getElementById('ann-message').value=''; loadAnnouncements(); }
+  else showMsg('failed', false);
+}
+async function toggleAnnouncement(id, active) {
+  await apiFetch(`/api/admin/announcements/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({active})});
+  loadAnnouncements();
+}
+async function delAnnouncement(id) {
+  await apiFetch(`/api/admin/announcements/${id}`, {method:'DELETE'});
+  showMsg('公告已删除'); loadAnnouncements();
+}
+
+// ── Audit Log ──
+async function loadAudit() {
+  const r = await apiFetch('/api/admin/audit');
+  if (!r.ok) return;
+  const logs = await r.json();
+  document.getElementById('audit-body').innerHTML = logs.map(l => `<tr>
+    <td class="audit-time">${new Date(l.created_at).toLocaleString()}</td>
+    <td>${esc(l.actor_email)}</td>
+    <td class="audit-action">${esc(l.action)}</td>
+    <td>${esc(l.target)}</td>
+    <td style="color:var(--text-muted);font-size:12px">${esc(l.details)}</td>
+  </tr>`).join('');
 }
 
 init();

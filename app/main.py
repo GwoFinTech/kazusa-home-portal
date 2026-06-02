@@ -199,15 +199,15 @@ def list_services(request: Request):
         else:
             d["access"] = "denied"
         result.append(d)
-    return result
+    return JSONResponse(content=result, headers={"Cache-Control": "public, max-age=30"})
 
 
 @app.get("/api/me")
 def api_me(request: Request):
     user = _get_current_user(request)
     if not user:
-        return {"authenticated": False}
-    return {"authenticated": True, **user}
+        return JSONResponse({"authenticated": False}, headers={"Cache-Control": "no-cache"})
+    return JSONResponse({"authenticated": True, **user}, headers={"Cache-Control": "no-cache"})
 
 
 # ── Static pages ─────────────────────────────────────────
@@ -225,6 +225,26 @@ def login_page():
 @app.get("/admin")
 def admin_page(request: Request):
     return FileResponse(os.path.join(STATIC_DIR, "admin.html"))
+
+
+@app.get("/common.css")
+def common_css():
+    return FileResponse(os.path.join(STATIC_DIR, "common.css"), media_type="text/css")
+
+
+@app.get("/common.js")
+def common_js():
+    return FileResponse(os.path.join(STATIC_DIR, "common.js"), media_type="application/javascript")
+
+
+@app.get("/manifest.json")
+def manifest():
+    return FileResponse(os.path.join(STATIC_DIR, "manifest.json"), media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def service_worker():
+    return FileResponse(os.path.join(STATIC_DIR, "sw.js"), media_type="application/javascript")
 
 
 # Mount static assets

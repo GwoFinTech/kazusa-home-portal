@@ -397,6 +397,7 @@ async def update_user_role(request: Request, user_id: int):
         return JSONResponse({"error": "role must not be empty"}, status_code=400)
     with db_cursor() as cur:
         cur.execute("UPDATE home_users SET role = %s WHERE id = %s", (new_role, user_id))
+    _log_audit(admin["email"], "user.role", str(user_id), new_role)
     return {"ok": True}
 
 
@@ -408,6 +409,7 @@ async def delete_user(request: Request, user_id: int):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     with db_cursor() as cur:
         cur.execute("DELETE FROM home_users WHERE id = %s AND email != %s", (user_id, config.ADMIN_EMAIL))
+    _log_audit(admin["email"], "user.delete", str(user_id))
     return {"ok": True}
 
 
@@ -437,6 +439,7 @@ async def create_acl(request: Request):
     with db_cursor() as cur:
         cur.execute("INSERT INTO home_acl (domain, email) VALUES (%s, %s) RETURNING id", (domain, email))
         rule_id = cur.fetchone()["id"]
+    _log_audit(admin["email"], "acl.create", f"{domain} → {email}")
     return {"id": rule_id, "domain": domain, "email": email, "enabled": True}
 
 
@@ -463,6 +466,7 @@ async def delete_acl(request: Request, rule_id: int):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     with db_cursor() as cur:
         cur.execute("DELETE FROM home_acl WHERE id = %s", (rule_id,))
+    _log_audit(admin["email"], "acl.delete", str(rule_id))
     return {"ok": True}
 
 
@@ -497,6 +501,7 @@ async def create_role_acl(request: Request):
             (domain, role),
         )
         rule_id = cur.fetchone()["id"]
+    _log_audit(admin["email"], "role-acl.create", f"{domain} → {role}")
     return {"id": rule_id, "domain": domain, "role": role, "enabled": True}
 
 
@@ -523,6 +528,7 @@ async def delete_role_acl(request: Request, rule_id: int):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     with db_cursor() as cur:
         cur.execute("DELETE FROM home_role_acl WHERE id = %s", (rule_id,))
+    _log_audit(admin["email"], "role-acl.delete", str(rule_id))
     return {"ok": True}
 
 
@@ -581,4 +587,108 @@ async def delete_role_preset(request: Request, preset_id: int):
         return JSONResponse({"error": "forbidden"}, status_code=403)
     with db_cursor() as cur:
         cur.execute("DELETE FROM home_role_presets WHERE id = %s", (preset_id,))
+    return {"ok": True}
+
+
+# ── Audit Log ─────────────────────────────────────────
+
+def _log_audit(actor_email: str, action: str, target: str = "", details: str = ""):
+    """Write an audit log entry (fire-and-forget)."""
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                "INSERT INTO home_audit_log (actor_email, action, target, details) VALUES (%s, %s, %s, %s)",
+                (actor_email, action, target, details),
+            )
+    except Exception as e:
+        logging.warning("Audit log write failed: %s", e)
+
+
+@router.get("/api/admin/audit")
+async def list_audit(request: Request):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("SELECT id, actor_email, action, target, details, created_at FROM home_audit_log ORDER BY id DESC LIMIT 200")
+        logs = [dict(r) for r in cur.fetchall()]
+    for l in logs:
+        if l["created_at"]:
+            l["created_at"] = l["created_at"].isoformat()
+    return logs
+
+
+# ── Announcements ─────────────────────────────────────
+
+@router.get("/api/announcements")
+async def list_active_announcements():
+    """Public: return active announcements for the homepage banner."""
+    with db_cursor() as cur:
+        cur.execute("SELECT id, message, level, created_at FROM home_announcements WHERE active = TRUE ORDER BY id DESC")
+        items = [dict(r) for r in cur.fetchall()]
+    for a in items:
+        if a["created_at"]:
+            a["created_at"] = a["created_at"].isoformat()
+    return items
+
+
+@router.get("/api/admin/announcements")
+async def list_all_announcements(request: Request):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("SELECT id, message, level, active, created_by, created_at FROM home_announcements ORDER BY id DESC")
+        items = [dict(r) for r in cur.fetchall()]
+    for a in items:
+        if a["created_at"]:
+            a["created_at"] = a["created_at"].isoformat()
+    return items
+
+
+@router.post("/api/admin/announcements")
+async def create_announcement(request: Request):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    message = body.get("message", "").strip()
+    level = body.get("level", "info").strip()
+    if not message:
+        return JSONResponse({"error": "message required"}, status_code=400)
+    if level not in ("info", "warn", "error"):
+        level = "info"
+    with db_cursor() as cur:
+        cur.execute(
+            "INSERT INTO home_announcements (message, level, created_by) VALUES (%s, %s, %s) RETURNING id",
+            (message, level, admin["email"]),
+        )
+        ann_id = cur.fetchone()["id"]
+    _log_audit(admin["email"], "announcement.create", str(ann_id), message[:100])
+    return {"id": ann_id, "message": message, "level": level, "active": True}
+
+
+@router.put("/api/admin/announcements/{ann_id}")
+async def update_announcement(request: Request, ann_id: int):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    body = await request.json()
+    with db_cursor() as cur:
+        if "active" in body:
+            cur.execute("UPDATE home_announcements SET active = %s WHERE id = %s", (body["active"], ann_id))
+        if "message" in body:
+            cur.execute("UPDATE home_announcements SET message = %s WHERE id = %s", (body["message"].strip(), ann_id))
+    _log_audit(admin["email"], "announcement.update", str(ann_id))
+    return {"ok": True}
+
+
+@router.delete("/api/admin/announcements/{ann_id}")
+async def delete_announcement(request: Request, ann_id: int):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM home_announcements WHERE id = %s", (ann_id,))
+    _log_audit(admin["email"], "announcement.delete", str(ann_id))
     return {"ok": True}

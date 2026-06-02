@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
-from .auth import router as auth_router, _get_current_user, _check_acl, limiter as auth_limiter
+from .auth import router as auth_router, _get_current_user, _check_acl, _csrf_token, limiter as auth_limiter
 from .db import init_pool, close_pool
 from . import config
 
@@ -207,7 +207,9 @@ def api_me(request: Request):
     user = _get_current_user(request)
     if not user:
         return JSONResponse({"authenticated": False}, headers={"Cache-Control": "no-cache"})
-    return JSONResponse({"authenticated": True, **user}, headers={"Cache-Control": "no-cache"})
+    session_token = request.cookies.get(config.COOKIE, "")
+    csrf = _csrf_token(session_token) if session_token else ""
+    return JSONResponse({"authenticated": True, "csrf": csrf, **user}, headers={"Cache-Control": "no-cache"})
 
 
 # ── Static pages ─────────────────────────────────────────

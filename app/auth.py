@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import html
 import logging
+import os
 import secrets
 import time
 from datetime import datetime, timedelta, timezone
@@ -297,6 +298,94 @@ async def auth_me(request: Request):
         return JSONResponse({"authenticated": False}, status_code=401)
     token = request.cookies.get(config.COOKIE, "")
     return {"authenticated": True, "csrf": _csrf_token(token), **user}
+
+
+# ── Mock Login (loopback only) ─────────────────────────
+
+def _is_loopback(request: Request) -> bool:
+    """Check if request is allowed for mock-login.
+
+    Allowed when:
+    1. Direct loopback (127.0.0.1 / ::1) — works for network_mode:host or direct access
+    2. X-Mock-Auth header matches MOCK_AUTH_SECRET env var — works through Docker port mapping / Traefik
+    """
+    # 1. Direct loopback
+    client = request.client
+    if client and client.host in ("127.0.0.1", "::1", "localhost"):
+        return True
+
+    # 2. Shared secret (for Docker port-mapped or Traefik-proxied requests)
+    mock_secret = os.environ.get("MOCK_AUTH_SECRET", "")
+    if mock_secret:
+        provided = request.headers.get("X-Mock-Auth", "")
+        if provided and hmac.compare_digest(provided, mock_secret):
+            return True
+
+    return False
+
+
+@router.post("/auth/mock-login")
+async def mock_login(request: Request):
+    """
+    Create a real session cookie without OAuth, for local testing.
+    Only accessible from 127.0.0.1 / ::1.
+
+    Optional JSON body:
+      email: str — user email to impersonate (default: ADMIN_EMAIL)
+
+    Returns:
+      Set-Cookie with the same settings as the real OAuth callback
+      JSON body with cookie name + value for programmatic use
+    """
+    if not _is_loopback(request):
+        return JSONResponse({"error": "mock-login only available from loopback"}, status_code=403)
+
+    # Parse optional body
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    email = (body.get("email") or config.ADMIN_EMAIL).strip()
+    if not email:
+        return JSONResponse({"error": "no email and no ADMIN_EMAIL configured"}, status_code=400)
+
+    # Look up or create user
+    with db_cursor() as cur:
+        cur.execute("SELECT id, email, name, role FROM home_users WHERE email = %s", (email,))
+        user = cur.fetchone()
+        if not user:
+            # Auto-create the user with admin role if it's the ADMIN_EMAIL
+            role = "admin" if email == config.ADMIN_EMAIL else "user"
+            cur.execute(
+                "INSERT INTO home_users (email, name, role, last_login_at) VALUES (%s, %s, %s, now()) RETURNING id",
+                (email, email.split("@")[0], role),
+            )
+            user_id = cur.fetchone()["id"]
+            user = {"id": user_id, "email": email, "name": email.split("@")[0], "role": role}
+        user_id = user["id"]
+
+    # Create a real signed session token (same as OAuth callback)
+    token = _make_session_token(user_id, email)
+
+    # Build response with Set-Cookie
+    result = {
+        "ok": True,
+        "email": email,
+        "role": user.get("role", "user"),
+        "cookie_name": config.COOKIE,
+        "cookie_value": token,
+    }
+    response = JSONResponse(result)
+    response.set_cookie(
+        key=config.COOKIE,
+        value=token,
+        max_age=config.MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        domain=config.COOKIE_DOMAIN if config.COOKIE_DOMAIN else None,
+    )
+    return response
 
 
 # ── Traefik ForwardAuth ─────────────────────────────────

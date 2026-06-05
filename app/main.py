@@ -199,7 +199,7 @@ def list_services(request: Request):
         else:
             d["access"] = "denied"
         result.append(d)
-    return JSONResponse(content=result, headers={"Cache-Control": "public, max-age=30"})
+    return JSONResponse(content=result, headers={"Cache-Control": "private, no-store"})
 
 
 @app.get("/api/me")

@@ -1,5 +1,6 @@
 """Environment-based configuration."""
 import os
+import sys
 
 # ── Google OAuth ──
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
@@ -8,6 +9,10 @@ GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "")
 
 # ── Session ──
 SECRET = os.getenv("SESSION_SECRET", "change-me-in-production")
+if SECRET == "change-me-in-production":
+    print("FATAL: SESSION_SECRET is set to the default value. "
+          "Generate one with: python3 -c \"import secrets; print(secrets.token_hex(32))\"", file=sys.stderr)
+    sys.exit(1)
 MAX_AGE = int(os.getenv("SESSION_MAX_AGE", "86400"))  # 24h
 COOKIE = "hp_session"
 COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "")

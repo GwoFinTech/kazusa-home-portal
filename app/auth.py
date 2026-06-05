@@ -91,15 +91,43 @@ def _error_page(title: str, icon: str, message: str, action_url: str, action_tex
 
 
 def _make_session_token(user_id: int, email: str) -> str:
-    """Create a signed session token: user_id.email.timestamp.signature"""
+    """Create a signed session token and store its hash in home_sessions."""
     ts = str(int(time.time()))
     payload = f"{user_id}.{email}.{ts}"
     sig = _sign(payload)
-    return f"{payload}.{sig}"
+    token = f"{payload}.{sig}"
+
+    # Store token hash in DB for server-side revocation
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    expires_at = datetime.fromtimestamp(int(ts) + config.MAX_AGE, tz=timezone.utc)
+    try:
+        with db_cursor() as cur:
+            # Purge expired sessions
+            cur.execute("DELETE FROM home_sessions WHERE expires_at < now()")
+            # Remove oldest sessions if user has too many (keep last 10)
+            cur.execute(
+                "DELETE FROM home_sessions WHERE user_id = %s AND id NOT IN "
+                "(SELECT id FROM home_sessions WHERE user_id = %s ORDER BY created_at DESC LIMIT 9)",
+                (user_id, user_id),
+            )
+            cur.execute(
+                "INSERT INTO home_sessions (id, user_id, expires_at) VALUES (%s, %s, %s)",
+                (token_hash, user_id, expires_at),
+            )
+    except Exception as e:
+        logging.warning("Failed to store session hash: %s", e)
+
+    return token
 
 
 def _verify_session_token(token: str) -> Optional[dict]:
-    """Verify and decode session token. Returns user info or None."""
+    """Verify and decode session token. Returns user info or None.
+    
+    Checks:
+    1. HMAC signature
+    2. Token expiry (client-side)
+    3. Token hash exists in home_sessions (server-side revocation)
+    """
     # Token format: user_id.email.timestamp.signature
     # Email may contain dots, so split from the right
     try:
@@ -118,6 +146,21 @@ def _verify_session_token(token: str) -> Optional[dict]:
         user_id = int(user_id_str)
     except ValueError:
         return None
+
+    # Check token hash exists in home_sessions (not revoked)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM home_sessions WHERE user_id = %s AND id = %s AND expires_at > now()",
+                (user_id, token_hash),
+            )
+            if not cur.fetchone():
+                return None
+    except Exception:
+        # If DB is down, fall back to HMAC-only validation
+        logging.warning("Session DB check failed, falling back to HMAC-only")
+
     return {"user_id": user_id, "email": email}
 
 
@@ -208,7 +251,11 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
     # Parse state to get return URL
     return_url = config.PORTAL_URL
     if "." in state:
-        _, return_url = state.split(".", 1)
+        sig_part, candidate = state.split(".", 1)
+        if hmac.compare_digest(sig_part, _sign(candidate)[:32]):
+            return_url = candidate
+        else:
+            logging.warning("OAuth state signature mismatch, ignoring return URL")
 
     # Exchange code for token
     async with httpx.AsyncClient() as client:
@@ -262,9 +309,6 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
         if email == config.ADMIN_EMAIL:
             cur.execute("UPDATE home_users SET role = 'admin' WHERE id = %s AND role != 'admin'", (user_id,))
 
-        # Clean expired sessions
-        cur.execute("DELETE FROM home_sessions WHERE expires_at < now()")
-
     # Create session token
     token = _make_session_token(user_id, email)
 
@@ -283,8 +327,17 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
 
 
 @router.get("/auth/logout")
-async def auth_logout():
-    """Clear session and redirect to portal."""
+async def auth_logout(request: Request):
+    """Clear session cookie and revoke server-side session."""
+    token = request.cookies.get(config.COOKIE, "")
+    if token:
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        try:
+            with db_cursor() as cur:
+                cur.execute("DELETE FROM home_sessions WHERE id = %s", (token_hash,))
+        except Exception as e:
+            logging.warning("Failed to revoke session on logout: %s", e)
+
     response = RedirectResponse(config.PORTAL_URL)
     response.delete_cookie(key=config.COOKIE, domain=config.COOKIE_DOMAIN if config.COOKIE_DOMAIN else None)
     return response

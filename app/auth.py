@@ -4,14 +4,18 @@ from __future__ import annotations
 import hashlib
 import hmac
 import html
+import io
 import logging
 import os
 import secrets
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatch
 from typing import Optional
 from urllib.parse import urlencode, quote
+
+import segno
 
 import httpx
 from fastapi import APIRouter, Cookie, Request, Response
@@ -351,6 +355,284 @@ async def auth_me(request: Request):
         return JSONResponse({"authenticated": False}, status_code=401)
     token = request.cookies.get(config.COOKIE, "")
     return {"authenticated": True, "csrf": _csrf_token(token), **user}
+
+
+# ── QR Code Login (device-to-device) ─────────────────────
+
+class _QRSession:
+    """In-memory QR login session."""
+
+    def __init__(self, user_id: int = 0, email: str = ""):
+        self.sid = secrets.token_urlsafe(24)
+        self.user_id = user_id
+        self.email = email
+        self.status = "pending"        # pending → confirmed → consumed
+        self.token: str | None = None  # set on confirm
+        self.created_at = time.time()
+        self.expires_at = self.created_at + 300  # 5 minutes
+
+
+class _QRStore:
+    """Thread-safe in-memory QR session store with automatic cleanup."""
+
+    def __init__(self):
+        self._sessions: dict[str, _QRSession] = {}
+        self._lock = threading.Lock()
+
+    def create(self) -> _QRSession:
+        self._purge()
+        s = _QRSession()
+        with self._lock:
+            self._sessions[s.sid] = s
+        return s
+
+    def get(self, sid: str) -> _QRSession | None:
+        with self._lock:
+            return self._sessions.get(sid)
+
+    def _purge(self):
+        now = time.time()
+        with self._lock:
+            expired = [k for k, v in self._sessions.items() if v.expires_at < now]
+            for k in expired:
+                del self._sessions[k]
+
+
+_qr_store = _QRStore()
+
+
+def _qr_svg(data: str) -> str:
+    """Generate QR code as SVG string."""
+    buf = io.BytesIO()
+    segno.make(data, error="m").save(buf, kind="svg", xmldecl=False, svgns=False)
+    return buf.getvalue().decode("utf-8")
+
+
+@router.post("/auth/qr/create")
+async def qr_create(request: Request):
+    """Create a QR login session. Returns session ID and QR SVG."""
+    s = _qr_store.create()
+    portal = config.PORTAL_URL.rstrip("/")
+    qr_data = f"{portal}/auth/qr/confirm?sid={s.sid}"
+    svg = _qr_svg(qr_data)
+    return {"sid": s.sid, "svg": svg, "expires_in": 300}
+
+
+@router.get("/auth/qr/status")
+async def qr_status(request: Request):
+    """Poll QR session status. Device B calls this repeatedly."""
+    sid = request.query_params.get("sid", "")
+    if not sid:
+        return JSONResponse({"status": "invalid"}, status_code=400)
+    s = _qr_store.get(sid)
+    if not s:
+        return {"status": "expired"}
+    if s.expires_at < time.time():
+        return {"status": "expired"}
+    if s.status == "confirmed" and s.token:
+        # Return token (don't consume yet — frontend will redirect to /auth/qr/token)
+        return {"status": "confirmed", "token": s.token}
+    return {"status": s.status}
+
+
+@router.get("/auth/qr/confirm")
+async def qr_confirm_page(request: Request):
+    """Show confirmation page for the authenticated scanner device (Device A)."""
+    sid = request.query_params.get("sid", "")
+    if not sid:
+        return HTMLResponse(_error_page(
+            title="无效链接", icon="❌",
+            message="二维码链接无效或已过期。",
+            action_url=config.PORTAL_URL, action_text="返回首页", status=400,
+        ), status_code=400)
+
+    s = _qr_store.get(sid)
+    if not s or s.expires_at < time.time():
+        return HTMLResponse(_error_page(
+            title="二维码已过期", icon="⏰",
+            message="此二维码已失效，请在另一台设备上重新生成。",
+            action_url=config.PORTAL_URL, action_text="返回首页", status=410,
+        ), status_code=410)
+
+    user = _get_current_user(request)
+    if not user:
+        # Not logged in — redirect to Google OAuth, then back here
+        return_url = f"{config.PORTAL_URL}/auth/qr/confirm?sid={sid}"
+        state = _sign(return_url)[:32] + "." + return_url
+        params = {
+            "client_id": config.GOOGLE_CLIENT_ID,
+            "redirect_uri": config.GOOGLE_REDIRECT_URI,
+            "response_type": "code",
+            "scope": SCOPES,
+            "state": state,
+            "access_type": "online",
+            "prompt": "select_account",
+        }
+        return RedirectResponse(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
+
+    csrf = _csrf_token(request.cookies.get(config.COOKIE, ""))
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="stylesheet" href="/common.css">
+  <title>扫码确认 — kazusa</title>
+  <style>
+    body {{ min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }}
+    .confirm-card {{
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 40px 32px; text-align: center; max-width: 380px; width: 100%;
+      box-shadow: var(--shadow);
+    }}
+    .confirm-card h1 {{ font-size: 20px; font-weight: 600; margin-bottom: 6px; }}
+    .confirm-card p {{ font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }}
+    .user-info {{
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 28px; text-align: left;
+    }}
+    .user-info img {{ width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }}
+    .user-info .name {{ font-size: 15px; font-weight: 600; }}
+    .user-info .email {{ font-size: 12px; color: var(--text-muted); margin-top: 2px; }}
+    .btn {{
+      display: inline-block; width: 100%; padding: 12px 24px; border-radius: 8px;
+      font-size: 15px; font-weight: 600; cursor: pointer; border: none;
+      transition: opacity .15s;
+    }}
+    .btn:disabled {{ opacity: .5; cursor: not-allowed; }}
+    .btn-primary {{ background: var(--primary); color: #fff; }}
+    .btn-primary:hover:not(:disabled) {{ opacity: .85; }}
+    .btn-cancel {{ background: none; border: 1px solid var(--border); color: var(--text-muted); margin-top: 10px; }}
+    .btn-cancel:hover {{ background: var(--hover-bg); }}
+    .msg {{ margin-top: 16px; display: none; padding: 10px; border-radius: 8px; font-size: 13px; }}
+  </style>
+</head>
+<body>
+  <div class="confirm-card">
+    <h1>扫码登录确认</h1>
+    <p>另一台设备请求登录你的账号，请确认是否授权</p>
+    <div class="user-info">
+      {f'<img src="{esc(user.get("picture", ""))}" alt="">' if user.get("picture") else ''}
+      <div>
+        <div class="name">{esc(user.get("name", ""))}</div>
+        <div class="email">{esc(user.get("email", ""))}</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="confirm-btn">确认授权</button>
+    <button class="btn btn-cancel" onclick="window.location.href='{config.PORTAL_URL}'">取消</button>
+    <div class="msg" id="msg"></div>
+  </div>
+  <script>
+    document.getElementById('confirm-btn').addEventListener('click', async function() {{
+      const btn = this;
+      btn.disabled = true;
+      btn.textContent = '授权中…';
+      const msg = document.getElementById('msg');
+      try {{
+        const r = await fetch('/auth/qr/confirm', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json', 'X-CSRF-Token': '{csrf}' }},
+          body: JSON.stringify({{ sid: '{sid}' }}),
+        }});
+        const data = await r.json();
+        if (data.ok) {{
+          msg.style.display = 'block';
+          msg.className = 'msg msg-ok';
+          msg.textContent = '授权成功！另一台设备正在登录…';
+        }} else {{
+          msg.style.display = 'block';
+          msg.className = 'msg msg-err';
+          msg.textContent = data.error || '授权失败';
+          btn.disabled = false;
+          btn.textContent = '重试';
+        }}
+      }} catch {{
+        msg.style.display = 'block';
+        msg.className = 'msg msg-err';
+        msg.textContent = '网络错误，请重试';
+        btn.disabled = false;
+        btn.textContent = '重试';
+      }}
+    }});
+  </script>
+  <script src="/common.js"></script>
+</body>
+</html>""")
+
+
+@router.post("/auth/qr/confirm")
+async def qr_confirm(request: Request):
+    """Confirm QR login. Authenticated Device A authorizes Device B."""
+    user = _get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+    # CSRF validation
+    session_token = request.cookies.get(config.COOKIE, "")
+    expected_csrf = _csrf_token(session_token)
+    provided_csrf = _get_csrf_header(request)
+    if not provided_csrf or not hmac.compare_digest(provided_csrf, expected_csrf):
+        return JSONResponse({"error": "CSRF mismatch"}, status_code=403)
+
+    body = await request.json()
+    sid = body.get("sid", "")
+    if not sid:
+        return JSONResponse({"error": "missing sid"}, status_code=400)
+
+    s = _qr_store.get(sid)
+    if not s:
+        return JSONResponse({"error": "QR session expired"}, status_code=410)
+    if s.status != "pending":
+        return JSONResponse({"error": "QR session already processed"}, status_code=409)
+    if s.expires_at < time.time():
+        return JSONResponse({"error": "QR session expired"}, status_code=410)
+
+    # Generate a real session token for Device B
+    token = _make_session_token(user["id"], user["email"])
+    s.status = "confirmed"
+    s.user_id = user["id"]
+    s.email = user["email"]
+    s.token = token
+
+    _log_audit(user["email"], "qr-login", sid[:16], "Device-to-device QR login")
+    return {"ok": True}
+
+
+@router.get("/auth/qr/token")
+async def qr_token(request: Request):
+    """Set session cookie from QR token and redirect to portal.
+    Device B's frontend navigates here after receiving the token via polling."""
+    sid = request.query_params.get("sid", "")
+    if not sid:
+        return RedirectResponse(config.PORTAL_URL)
+
+    s = _qr_store.get(sid)
+    if not s or not s.token:
+        return HTMLResponse(_error_page(
+            title="登录失败", icon="❌",
+            message="二维码已过期或已使用，请重新扫码。",
+            action_url=config.PORTAL_URL, action_text="返回首页", status=410,
+        ), status_code=410)
+
+    # Consume the token
+    token = s.token
+    s.token = None
+    s.status = "consumed"
+
+    # Set session cookie and redirect to portal
+    response = RedirectResponse(config.PORTAL_URL)
+    response.set_cookie(
+        key=config.COOKIE,
+        value=token,
+        max_age=config.MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        domain=config.COOKIE_DOMAIN if config.COOKIE_DOMAIN else None,
+    )
+    return response
 
 
 # ── Mock Login (loopback only) ─────────────────────────

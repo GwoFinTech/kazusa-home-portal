@@ -12,6 +12,7 @@
     .login-card {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 40px; text-align: center; max-width: 360px; width: 100%;
+      box-shadow: var(--shadow);
     }
     .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
     .login-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
@@ -23,6 +24,28 @@
     }
     .google-btn:hover { background: var(--bg); }
     .google-btn svg { width: 18px; height: 18px; }
+    .divider {
+      display: flex; align-items: center; gap: 12px; margin: 20px 0;
+      font-size: 12px; color: var(--text-subtle);
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .qr-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--card-bg); color: var(--text); font-size: 14px;
+      cursor: pointer; transition: background .15s; width: 100%; justify-content: center;
+    }
+    .qr-btn:hover { background: var(--bg); }
+    #qr-section { display: none; margin-top: 20px; }
+    #qr-display {
+      padding: 16px; background: #fff; border-radius: 12px;
+      display: inline-block; margin-bottom: 12px;
+    }
+    #qr-display svg { display: block; }
+    #qr-status { font-size: 13px; color: var(--text-muted); min-height: 20px; }
+    #qr-status.error { color: var(--danger); }
   </style>
 </head>
 <body>
@@ -33,6 +56,66 @@
       <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
       Sign in with Google
     </a>
+    <div class="divider">or</div>
+    <button class="qr-btn" id="qr-btn" onclick="startQR()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><path d="M17 14h3v3"/><path d="M20 17v3h-3"/><path d="M14 20h3"/></svg>
+      扫码登录
+    </button>
+    <div id="qr-section">
+      <div id="qr-display"></div>
+      <div id="qr-status">正在生成二维码…</div>
+    </div>
   </div>
+<script>
+let qrPollTimer = null;
+
+async function startQR() {
+  document.getElementById('qr-btn').style.display = 'none';
+  const section = document.getElementById('qr-section');
+  const display = document.getElementById('qr-display');
+  const status = document.getElementById('qr-status');
+  section.style.display = 'block';
+  status.textContent = '正在生成二维码…';
+  status.className = '';
+
+  try {
+    const r = await fetch('/auth/qr/create', { method: 'POST' });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    display.innerHTML = data.svg;
+    status.textContent = '请用已登录的设备扫描此二维码';
+
+    // Start polling
+    let count = 0;
+    qrPollTimer = setInterval(async () => {
+      count++;
+      if (count > 150) { // 5 min at 2s intervals
+        clearInterval(qrPollTimer);
+        status.textContent = '二维码已过期，请刷新页面重试';
+        status.className = 'error';
+        return;
+      }
+      try {
+        const sr = await fetch('/auth/qr/status?sid=' + data.sid);
+        const s = await sr.json();
+        if (s.status === 'confirmed' && s.token) {
+          clearInterval(qrPollTimer);
+          status.textContent = '登录成功，正在跳转…';
+          status.className = '';
+          window.location.href = '/auth/qr/token?sid=' + data.sid;
+        } else if (s.status === 'expired') {
+          clearInterval(qrPollTimer);
+          status.textContent = '二维码已过期，请刷新页面重试';
+          status.className = 'error';
+        }
+      } catch {}
+    }, 2000);
+  } catch {
+    status.textContent = '生成二维码失败，请重试';
+    status.className = 'error';
+    document.getElementById('qr-btn').style.display = '';
+  }
+}
+</script>
 </body>
 </html>

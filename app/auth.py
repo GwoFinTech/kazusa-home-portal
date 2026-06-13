@@ -7,6 +7,7 @@ import html
 import io
 import logging
 import os
+import re
 import secrets
 import threading
 import time
@@ -406,9 +407,9 @@ def _qr_svg(data: str) -> str:
     buf = io.BytesIO()
     segno.make(data, error="m").save(buf, kind="svg", xmldecl=False, svgns=False)
     svg = buf.getvalue().decode("utf-8")
-    # Inject width/height for consistent sizing across browsers
-    if "<svg " in svg and "width=" not in svg:
-        svg = svg.replace("<svg ", '<svg width="240" height="240" ', 1)
+    # Override segno's default tiny dimensions with 240x240
+    svg = re.sub(r'width="\d+"', 'width="240"', svg, count=1)
+    svg = re.sub(r'height="\d+"', 'height="240"', svg, count=1)
     return svg
 
 

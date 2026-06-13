@@ -548,10 +548,22 @@ async def qr_confirm_page(request: Request):
         if (data.ok) {{
           msg.style.display = 'block';
           msg.className = 'msg msg-ok';
-          msg.textContent = '授权请求已发出，3 秒后回到主页…';
-          btn.style.display = 'none';
+          msg.textContent = '授权请求已发出';
+          btn.textContent = '回到主页 (3)';
+          btn.disabled = false;
+          btn.className = 'btn btn-primary';
+          btn.onclick = function() {{ window.location.href = '{config.PORTAL_URL}'; }};
           document.querySelector('.btn-cancel').style.display = 'none';
-          setTimeout(function() {{ window.location.href = '{config.PORTAL_URL}'; }}, 3000);
+          var sec = 3;
+          var timer = setInterval(function() {{
+            sec--;
+            if (sec <= 0) {{
+              clearInterval(timer);
+              window.location.href = '{config.PORTAL_URL}';
+            }} else {{
+              btn.textContent = '回到主页 (' + sec + ')';
+            }}
+          }}, 1000);
         }} else {{
           msg.style.display = 'block';
           msg.className = 'msg msg-err';

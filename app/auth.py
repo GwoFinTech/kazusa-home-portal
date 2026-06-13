@@ -514,10 +514,10 @@ async def qr_confirm_page(request: Request):
     <h1>扫码登录确认</h1>
     <p>另一台设备请求登录你的账号，请确认是否授权</p>
     <div class="user-info">
-      {f'<img src="{esc(user.get("picture", ""))}" alt="">' if user.get("picture") else ''}
+      {f'<img src="{html.escape(user.get("picture", ""))}" alt="">' if user.get("picture") else ''}
       <div>
-        <div class="name">{esc(user.get("name", ""))}</div>
-        <div class="email">{esc(user.get("email", ""))}</div>
+        <div class="name">{html.escape(user.get("name", ""))}</div>
+        <div class="email">{html.escape(user.get("email", ""))}</div>
       </div>
     </div>
     <button class="btn btn-primary" id="confirm-btn">确认授权</button>

@@ -7,7 +7,6 @@ import html
 import io
 import logging
 import os
-import re
 import secrets
 import threading
 import time
@@ -403,14 +402,10 @@ _qr_store = _QRStore()
 
 
 def _qr_svg(data: str) -> str:
-    """Generate QR code as SVG string with explicit 240x240 size."""
+    """Generate QR code as SVG string."""
     buf = io.BytesIO()
     segno.make(data, error="m").save(buf, kind="svg", xmldecl=False, svgns=False)
-    svg = buf.getvalue().decode("utf-8")
-    # Override segno's default tiny dimensions with 240x240
-    svg = re.sub(r'width="\d+"', 'width="240"', svg, count=1)
-    svg = re.sub(r'height="\d+"', 'height="240"', svg, count=1)
-    return svg
+    return buf.getvalue().decode("utf-8")
 
 
 @router.post("/auth/qr/create")

@@ -15,11 +15,11 @@
     }
     header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
     header p { color: var(--text-muted); font-size: 13px; }
-    .user-bar { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+    .user-bar { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
     .user-bar img { width: 24px; height: 24px; border-radius: 50%; }
     .user-bar span { font-size: 13px; color: var(--text-muted); }
-    .user-bar a { font-size: 12px; color: var(--text-subtle); text-decoration: none; }
-    .user-bar a:hover { color: var(--text); }
+    .user-bar a, .user-bar .bar-btn { font-size: 12px; color: var(--text-subtle); text-decoration: none; cursor: pointer; background: none; border: none; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
+    .user-bar a:hover, .user-bar .bar-btn:hover { color: var(--text); }
     .google-btn {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
@@ -84,40 +84,41 @@
     .badge-login { background: var(--primary); color: #fff; }
     .badge-role { background: var(--warning); color: #fff; }
 
-    /* QR login */
-    .qr-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
-      text-decoration: none; transition: background .15s;
-      border: 1px solid var(--border); background: var(--card-bg); color: var(--text);
-      cursor: pointer; box-shadow: var(--shadow);
-    }
-    .qr-link:hover { background: var(--hover-bg); }
-    #qr-overlay {
+    /* QR overlay (shared for show-QR and scan-QR) */
+    .qr-overlay {
       display: none; position: fixed; inset: 0; z-index: 100;
       background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
       align-items: center; justify-content: center; padding: 24px;
     }
-    #qr-overlay.active { display: flex; }
+    .qr-overlay.active { display: flex; }
     .qr-modal {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 32px; text-align: center; max-width: 340px; width: 100%;
+      padding: 32px; text-align: center; max-width: 360px; width: 100%;
       box-shadow: var(--shadow); position: relative;
     }
     .qr-modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
     .qr-modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
-    #qr-modal-display {
-      padding: 12px; background: #fff; border-radius: 10px;
-      display: inline-block; margin-bottom: 12px;
+    #qr-show-display {
+      padding: 16px; background: #fff; border-radius: 10px;
+      display: inline-block; margin-bottom: 16px;
     }
-    #qr-modal-display svg { display: block; }
-    #qr-modal-status { font-size: 13px; color: var(--text-muted); min-height: 20px; }
-    #qr-modal-status.error { color: var(--danger); }
+    #qr-show-display svg { display: block; width: 240px; height: 240px; }
+    #qr-show-status { font-size: 13px; color: var(--text-muted); min-height: 20px; }
+    #qr-show-status.error { color: var(--danger); }
     .qr-close {
       position: absolute; top: 12px; right: 16px; background: none; border: none;
       font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 4px;
     }
     .qr-close:hover { color: var(--text); }
+
+    /* Scanner modal */
+    #scanner-video {
+      width: 100%; max-width: 300px; border-radius: 8px;
+      background: #000; aspect-ratio: 1;
+    }
+    #scanner-status { font-size: 13px; color: var(--text-muted); margin-top: 12px; min-height: 20px; }
+    #scanner-status.error { color: var(--danger); }
+    #scanner-status.success { color: var(--success); }
 
     /* Skeleton loading */
     .skeleton { background: var(--border); border-radius: 4px; animation: shimmer 1.5s ease-in-out infinite; }
@@ -139,21 +140,39 @@
   <div class="skeleton skeleton-card"></div>
 </div>
 <footer>kazusa home portal</footer>
-<div id="qr-overlay" onclick="if(event.target===this)closeQR()">
+
+<!-- QR Show Modal (unauthenticated: display QR for scanning) -->
+<div id="qr-show-overlay" class="qr-overlay" onclick="if(event.target===this)closeShowQR()">
   <div class="qr-modal">
-    <button class="qr-close" onclick="closeQR()">&times;</button>
+    <button class="qr-close" onclick="closeShowQR()">&times;</button>
     <h2>扫码登录</h2>
     <p>用已登录的设备扫描此二维码</p>
-    <div id="qr-modal-display"></div>
-    <div id="qr-modal-status">正在生成二维码…</div>
+    <div id="qr-show-display"></div>
+    <div id="qr-show-status">正在生成二维码…</div>
   </div>
 </div>
+
+<!-- QR Scan Modal (authenticated: open camera to scan) -->
+<div id="qr-scan-overlay" class="qr-overlay" onclick="if(event.target===this)closeScanQR()">
+  <div class="qr-modal">
+    <button class="qr-close" onclick="closeScanQR()">&times;</button>
+    <h2>扫码授权登录</h2>
+    <p>对准另一台设备上的二维码</p>
+    <video id="scanner-video" autoplay playsinline></video>
+    <canvas id="scanner-canvas" style="display:none"></canvas>
+    <div id="scanner-status">正在启动摄像头…</div>
+  </div>
+</div>
+
 <script src="/common.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
 const grid = document.getElementById('grid');
 const subtitle = document.getElementById('subtitle');
 const userBar = document.getElementById('user-bar');
 const annDiv = document.getElementById('announcements');
+
+const SCAN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>';
 
 async function loadUser() {
   try {
@@ -167,18 +186,20 @@ async function loadUser() {
           ${u.picture ? `<img src="${esc(u.picture)}" alt="">` : ''}
           <span>${esc(u.name || u.email)}</span>
           ${u.role === 'admin' ? '<a href="/admin">admin</a>' : ''}
+          <button class="bar-btn" onclick="openScanQR()">${SCAN_SVG} 扫码</button>
           <a href="/auth/logout">logout</a>
         `;
         return;
       }
     }
   } catch {}
+  // Unauthenticated
   userBar.style.display = 'flex';
   userBar.innerHTML = `<a class="google-btn" href="/auth/login">
     <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
     使用 Google 登录
   </a>
-  <button class="qr-link" onclick="openQR()">
+  <button class="google-btn" onclick="openShowQR()" style="gap:6px">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><path d="M17 14h3v3"/><path d="M20 17v3h-3"/><path d="M14 20h3"/></svg>
     扫码登录
   </button>`;
@@ -251,13 +272,13 @@ loadServices();
 setInterval(loadServices, 30000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
 
-/* ── QR Login ── */
-let qrPollTimer = null;
+/* ── QR Show (unauthenticated: display QR for another device to scan) ── */
+let qrShowTimer = null;
 
-async function openQR() {
-  const overlay = document.getElementById('qr-overlay');
-  const display = document.getElementById('qr-modal-display');
-  const status = document.getElementById('qr-modal-status');
+async function openShowQR() {
+  const overlay = document.getElementById('qr-show-overlay');
+  const display = document.getElementById('qr-show-display');
+  const status = document.getElementById('qr-show-status');
   overlay.classList.add('active');
   display.innerHTML = '';
   status.textContent = '正在生成二维码…';
@@ -271,10 +292,10 @@ async function openQR() {
     status.textContent = '请用已登录的设备扫描此二维码';
 
     let count = 0;
-    qrPollTimer = setInterval(async () => {
+    qrShowTimer = setInterval(async () => {
       count++;
       if (count > 150) {
-        clearInterval(qrPollTimer);
+        clearInterval(qrShowTimer);
         status.textContent = '二维码已过期，请关闭后重试';
         status.className = 'error';
         return;
@@ -283,11 +304,11 @@ async function openQR() {
         const sr = await fetch('/auth/qr/status?sid=' + data.sid);
         const s = await sr.json();
         if (s.status === 'confirmed' && s.token) {
-          clearInterval(qrPollTimer);
+          clearInterval(qrShowTimer);
           status.textContent = '登录成功，正在跳转…';
           window.location.href = '/auth/qr/token?sid=' + data.sid;
         } else if (s.status === 'expired') {
-          clearInterval(qrPollTimer);
+          clearInterval(qrShowTimer);
           status.textContent = '二维码已过期，请关闭后重试';
           status.className = 'error';
         }
@@ -299,9 +320,81 @@ async function openQR() {
   }
 }
 
-function closeQR() {
-  document.getElementById('qr-overlay').classList.remove('active');
-  if (qrPollTimer) { clearInterval(qrPollTimer); qrPollTimer = null; }
+function closeShowQR() {
+  document.getElementById('qr-show-overlay').classList.remove('active');
+  if (qrShowTimer) { clearInterval(qrShowTimer); qrShowTimer = null; }
+}
+
+/* ── QR Scan (authenticated: open camera to scan another device's QR) ── */
+let scannerStream = null;
+let scannerRAF = null;
+
+async function openScanQR() {
+  const overlay = document.getElementById('qr-scan-overlay');
+  const video = document.getElementById('scanner-video');
+  const status = document.getElementById('scanner-status');
+  overlay.classList.add('active');
+  status.textContent = '正在启动摄像头…';
+  status.className = '';
+
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 640 } }
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+    status.textContent = '对准二维码自动识别';
+
+    const canvas = document.getElementById('scanner-canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    function tick() {
+      if (!scannerStream) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+        if (code && code.data) {
+          const url = code.data;
+          // Verify it's a valid QR confirm URL
+          if (url.includes('/auth/qr/confirm?sid=') || url.includes('/auth/qr/confirm%3Fsid%3D')) {
+            status.textContent = '识别成功，正在跳转…';
+            status.className = 'success';
+            closeScanQR();
+            window.location.href = url;
+            return;
+          } else {
+            status.textContent = '非登录二维码，请对准正确的二维码';
+            status.className = 'error';
+          }
+        }
+      }
+      scannerRAF = requestAnimationFrame(tick);
+    }
+    scannerRAF = requestAnimationFrame(tick);
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      status.textContent = '摄像头权限被拒绝，请在浏览器设置中允许访问';
+    } else if (err.name === 'NotFoundError') {
+      status.textContent = '未找到摄像头设备';
+    } else {
+      status.textContent = '无法启动摄像头: ' + err.message;
+    }
+    status.className = 'error';
+  }
+}
+
+function closeScanQR() {
+  document.getElementById('qr-scan-overlay').classList.remove('active');
+  if (scannerRAF) { cancelAnimationFrame(scannerRAF); scannerRAF = null; }
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  const video = document.getElementById('scanner-video');
+  video.srcObject = null;
 }
 </script>
 </body>

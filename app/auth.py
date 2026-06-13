@@ -402,10 +402,14 @@ _qr_store = _QRStore()
 
 
 def _qr_svg(data: str) -> str:
-    """Generate QR code as SVG string."""
+    """Generate QR code as SVG string with explicit 240x240 size."""
     buf = io.BytesIO()
     segno.make(data, error="m").save(buf, kind="svg", xmldecl=False, svgns=False)
-    return buf.getvalue().decode("utf-8")
+    svg = buf.getvalue().decode("utf-8")
+    # Inject width/height for consistent sizing across browsers
+    if "<svg " in svg and "width=" not in svg:
+        svg = svg.replace("<svg ", '<svg width="240" height="240" ', 1)
+    return svg
 
 
 @router.post("/auth/qr/create")

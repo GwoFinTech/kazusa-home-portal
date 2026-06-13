@@ -7,6 +7,7 @@ import html
 import io
 import logging
 import os
+import re
 import secrets
 import threading
 import time
@@ -402,10 +403,17 @@ _qr_store = _QRStore()
 
 
 def _qr_svg(data: str) -> str:
-    """Generate QR code as SVG string."""
+    """Generate QR code as SVG string with viewBox for CSS scaling."""
     buf = io.BytesIO()
     segno.make(data, error="m").save(buf, kind="svg", xmldecl=False, svgns=False)
-    return buf.getvalue().decode("utf-8")
+    svg = buf.getvalue().decode("utf-8")
+    # Ensure viewBox exists so CSS can scale the SVG properly
+    if "viewBox" not in svg and 'width="' in svg and 'height="' in svg:
+        w = re.search(r'width="(\d+)"', svg)
+        h = re.search(r'height="(\d+)"', svg)
+        if w and h:
+            svg = svg.replace("<svg ", f'<svg viewBox="0 0 {w.group(1)} {h.group(1)}" ', 1)
+    return svg
 
 
 @router.post("/auth/qr/create")

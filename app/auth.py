@@ -548,7 +548,10 @@ async def qr_confirm_page(request: Request):
         if (data.ok) {{
           msg.style.display = 'block';
           msg.className = 'msg msg-ok';
-          msg.textContent = '授权成功！另一台设备正在登录…';
+          msg.textContent = '授权请求已发出，3 秒后回到主页…';
+          btn.style.display = 'none';
+          document.querySelector('.btn-cancel').style.display = 'none';
+          setTimeout(function() {{ window.location.href = '{config.PORTAL_URL}'; }}, 3000);
         }} else {{
           msg.style.display = 'block';
           msg.className = 'msg msg-err';

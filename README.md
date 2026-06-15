@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-基于 Docker labels 的 Web 服务门户系统，提供服务展示、Google OAuth 登录和基于角色的访问控制（RBAC）。
+基于 Docker labels 的 Web 服务门户系统，提供服务展示、Google OAuth 登录、扫码登录和基于角色的访问控制（RBAC）。
 
 ## 架构
 
@@ -18,6 +18,55 @@
 3. 检查 ACL（先查 `home_role_acl` 角色规则，再查 `home_acl` 用户规则，均支持 fnmatch 通配符）
 4. 通过 → 设置 `X-User-Id/Email/Name/Role` headers 转发给上游
 5. 失败 → 返回 401（未登录）或 403（无权限）错误页面
+
+## 扫码登录
+
+支持已登录设备扫码授权未登录设备，适用于无法直接访问 Google OAuth 的设备（如内网设备、无 Google 服务的浏览器等）。
+
+### 流程
+
+```
+设备 B（未登录）                    设备 A（已登录）
+     │                                  │
+     ├─ 点击「扫码登录」                │
+     ├─ POST /auth/qr/create           │
+     ├─ 显示二维码 (240x240)            │
+     │   ┌─────────────┐               │
+     │   │  QR Code     │◄── 摄像头扫描 ┤
+     │   │  5 分钟有效   │               │
+     │   └─────────────┘               ├─ 打开确认页面
+     │                                  ├─ 显示用户信息
+     ├─ 轮询 GET /auth/qr/status        ├─ 点击「确认授权」
+     │   (每 2 秒)                      ├─ POST /auth/qr/confirm
+     │                                  │
+     │◄──── status: confirmed ──────────┤
+     ├─ 跳转 /auth/qr/token?sid=xxx     │
+     ├─ 设置 session cookie             │
+     └─ 登录完成，跳转首页              └─ 显示「回到主页 (3)」倒计时
+```
+
+### 入口
+
+- **未登录用户**：门户首页和登录页均有「扫码登录」按钮，点击显示二维码
+- **已登录用户**：用户栏有「扫码」按钮，点击打开摄像头扫描器（基于 jsQR）
+
+### API
+
+| Method | Endpoint | 说明 |
+|--------|----------|------|
+| POST | `/auth/qr/create` | 创建 QR 会话，返回 `{sid, svg, expires_in}` |
+| GET | `/auth/qr/status?sid=` | 轮询状态（pending/confirmed/expired） |
+| GET | `/auth/qr/confirm?sid=` | 扫描端确认页面（需登录） |
+| POST | `/auth/qr/confirm` | 确认授权（CSRF 保护） |
+| GET | `/auth/qr/token?sid=` | 设置 cookie 并跳转首页 |
+
+### 安全设计
+
+- QR 会话 5 分钟过期，内存存储（无需数据库）
+- Token 一次性使用，二次访问返回 410
+- 确认端点需要 CSRF 校验 + 已登录状态
+- 未登录设备扫码会先跳转 Google OAuth
+- 操作记入审计日志（`qr-login`）
 
 ## 服务注册
 
@@ -123,6 +172,7 @@ def _require_admin(request: Request) -> bool:
 - **Docker API 缓存** — 30s TTL + 后台线程刷新，避免每次请求都调用 Docker socket
 - **DB 连接池** — psycopg2 `ThreadedConnectionPool(2, 10)`
 - **审计日志** — 所有 admin 变更自动记录到 `home_audit_log`，Admin UI 可查最近 200 条
+- **Session 服务端撤销** — Token hash 存储在 `home_sessions`，支持单点登出和并发会话上限（10/session/user）
 
 ## 公告系统
 
@@ -144,6 +194,7 @@ def _require_admin(request: Request) -> bool:
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | `GOCSPX-...` |
 | `GOOGLE_REDIRECT_URI` | OAuth 回调地址 | `https://home.example.com/auth/callback` |
 | `SESSION_SECRET` | Session cookie 签名密钥 | 64 位随机 hex |
+| `SESSION_MAX_AGE` | Session 有效期（秒） | `2592000`（30 天） |
 | `COOKIE_DOMAIN` | Cookie 域名（跨子域共享） | `.example.com` |
 | `PORTAL_URL` | 门户地址 | `https://example.com` |
 | `PORTAL_HOSTS` | 门户域名白名单（逗号分隔） | `example.com,home.example.com` |
@@ -176,6 +227,7 @@ docker compose logs -f
 - **前端：** 原生 HTML/CSS/JS（SPA）
 - **数据库：** PostgreSQL（7 张表：users, sessions, acl, role_acl, role_presets, audit_log, announcements）
 - **认证：** Google OAuth 2.0 + HMAC-SHA256 session + CSRF 保护
+- **扫码登录：** segno（服务端 SVG 二维码生成）+ jsQR（客户端摄像头扫码）
 - **反向代理：** Traefik v3 + forwardAuth
 - **限流：** slowapi
 - **包管理：** uv (pyproject.toml + uv.lock)

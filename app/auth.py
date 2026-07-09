@@ -77,9 +77,9 @@ def _error_page(title: str, icon: str, message: str, action_url: str, action_tex
     a {{
       display: inline-block; padding: 10px 24px; border-radius: 8px;
       background: var(--accent); color: #fff; text-decoration: none;
-      font-size: 14px; font-weight: 500; transition: opacity .15s;
+      font-size: 14px; font-weight: 500; transition: filter .15s;
     }}
-    a:hover {{ opacity: .85; }}
+    a:hover {{ filter: brightness(1.15); }}
     .footer {{ margin-top: 32px; font-size: 11px; color: var(--text-subtle); }}
   </style>
 </head>
@@ -561,13 +561,15 @@ async def qr_confirm_page(request: Request):
     .btn {{
       display: inline-block; width: 100%; padding: 12px 24px; border-radius: 8px;
       font-size: 15px; font-weight: 600; cursor: pointer; border: none;
-      transition: opacity .15s;
+      transition: background .15s, color .15s, filter .15s;
     }}
-    .btn:disabled {{ opacity: .5; cursor: not-allowed; }}
+    .btn:disabled, .btn:disabled:hover {{
+      background: var(--border); color: var(--text-muted); cursor: not-allowed; filter: none;
+    }}
     .btn-primary {{ background: var(--primary); color: #fff; }}
-    .btn-primary:hover:not(:disabled) {{ opacity: .85; }}
+    .btn-primary:hover:not(:disabled) {{ filter: brightness(1.15); }}
     .btn-cancel {{ background: none; border: 1px solid var(--border); color: var(--text-muted); margin-top: 10px; }}
-    .btn-cancel:hover {{ background: var(--hover-bg); }}
+    .btn-cancel:hover:not(:disabled) {{ background: var(--hover-bg); }}
     .msg {{ margin-top: 16px; display: none; padding: 10px; border-radius: 8px; font-size: 13px; }}
   </style>
 </head>

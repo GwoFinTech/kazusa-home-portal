@@ -31,13 +31,6 @@
     .divider::before, .divider::after {
       content: ''; flex: 1; height: 1px; background: var(--border);
     }
-    .qr-btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 24px; border: 1px solid var(--border); border-radius: 8px;
-      background: var(--card-bg); color: var(--text); font-size: 14px;
-      cursor: pointer; transition: background .15s; width: 100%; justify-content: center;
-    }
-    .qr-btn:hover { background: var(--bg); }
     #qr-section { display: none; margin-top: 24px; }
     #qr-display {
       padding: 16px; background: #fff; border-radius: 12px;
@@ -59,7 +52,7 @@
         Sign in with Google
       </a>
       <div class="divider">or</div>
-      <button class="qr-btn" id="qr-btn" onclick="startQR()">
+      <button class="btn btn-outline" id="qr-btn" onclick="startQR()" style="width:100%">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><path d="M17 14h3v3"/><path d="M20 17v3h-3"/><path d="M14 20h3"/></svg>
         扫码登录
       </button>

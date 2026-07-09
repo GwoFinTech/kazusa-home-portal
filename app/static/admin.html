@@ -27,8 +27,8 @@
     tr:hover td { background: var(--hover-bg); }
     .role-input { width: 80px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--card-bg); color: var(--text); font-size: 12px; font-family: inherit; }
     .role-input:focus { outline: none; border-color: #94a3b8; }
-    .role-save { padding: 2px 8px; font-size: 11px; }
     .form-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+    .form-row button { flex-shrink: 0; }
     .form-row input, .form-row select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); font-size: 13px; flex: 1; min-width: 120px; }
     .form-row input:focus, .form-row select:focus { outline: none; border-color: #94a3b8; }
     .toggle { cursor: pointer; }
@@ -63,7 +63,7 @@
       <div class="form-row">
         <input id="racl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="racl-role" placeholder="role (e.g. user)">
-        <button onclick="addRoleAcl()">Add</button>
+        <button class="btn btn-sm btn-primary" onclick="addRoleAcl()">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>Domain</th><th>Role</th><th>Enabled</th><th></th></tr></thead>
@@ -77,7 +77,7 @@
       <div class="form-row">
         <input id="preset-email" placeholder="email (e.g. friend@gmail.com)">
         <input id="preset-role" placeholder="role (e.g. friend)">
-        <button onclick="addPreset()">Add</button>
+        <button class="btn btn-sm btn-primary" onclick="addPreset()">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
@@ -100,7 +100,7 @@
       <div class="form-row">
         <input id="acl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="acl-email" placeholder="email (e.g. *@feng.moe)">
-        <button onclick="addAcl()">Add</button>
+        <button class="btn btn-sm btn-primary" onclick="addAcl()">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>Domain</th><th>Email</th><th>Enabled</th><th></th></tr></thead>
@@ -114,7 +114,7 @@
       <div class="form-row">
         <input id="ann-message" placeholder="公告内容">
         <select id="ann-level"><option value="info">信息</option><option value="warn">警告</option><option value="error">紧急</option></select>
-        <button onclick="addAnnouncement()">发布</button>
+        <button class="btn btn-sm btn-primary" onclick="addAnnouncement()">发布</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>内容</th><th>级别</th><th>状态</th><th>时间</th><th></th></tr></thead>
@@ -185,7 +185,7 @@ async function loadRoleAcl() {
       <td><code>${esc(r.domain)}</code></td>
       <td><span class="badge badge-${r.role === 'admin' ? 'admin' : r.role === 'user' ? 'user' : 'custom'}">${esc(r.role)}</span></td>
       <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? '✅' : '⬜'}</td>
-      <td><button class="danger" onclick="delRoleAcl(${r.id})">delete</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="delRoleAcl(${r.id})">delete</button></td>
     </tr>
   `).join('');
 }
@@ -218,10 +218,10 @@ async function loadPresets() {
       <td>
         <span class="badge ${badgeCls}" id="preset-badge-${p.id}">${esc(p.role)}</span>
         <input class="role-input" id="preset-input-${p.id}" value="${esc(p.role)}" style="display:none" onkeydown="if(event.key==='Enter')savePreset(${p.id})">
-        <button class="role-save" id="preset-edit-btn-${p.id}" onclick="editPreset(${p.id})">edit</button>
-        <button class="role-save" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">save</button>
+        <button class="btn btn-sm btn-outline" id="preset-edit-btn-${p.id}" onclick="editPreset(${p.id})">edit</button>
+        <button class="btn btn-sm btn-primary" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">save</button>
       </td>
-      <td><button class="danger" onclick="delPreset(${p.id},'${esc(p.email)}')">delete</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="delPreset(${p.id},'${esc(p.email)}')">delete</button></td>
     </tr>`;
   }).join('');
 }
@@ -266,11 +266,11 @@ async function loadUsers() {
       <td>
         <span class="badge ${badgeCls}" id="role-badge-${u.id}">${esc(u.role)}</span>
         <input class="role-input" id="role-input-${u.id}" value="${esc(u.role)}" style="display:none" onkeydown="if(event.key==='Enter')saveRole(${u.id})">
-        <button class="role-save" id="role-edit-btn-${u.id}" onclick="editRole(${u.id})">edit</button>
-        <button class="role-save" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">save</button>
+        <button class="btn btn-sm btn-outline" id="role-edit-btn-${u.id}" onclick="editRole(${u.id})">edit</button>
+        <button class="btn btn-sm btn-primary" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">save</button>
       </td>
       <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}</td>
-      <td><button class="danger" onclick="delUser(${u.id},'${esc(u.email)}')">delete</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="delUser(${u.id},'${esc(u.email)}')">delete</button></td>
     </tr>`;
   }).join('');
 }
@@ -303,7 +303,7 @@ async function loadAcl() {
     <td>${esc(r.domain)}</td>
     <td>${esc(r.email)}</td>
     <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? '✅' : '⬜'}</td>
-    <td><button class="danger" onclick="delAcl(${r.id})">delete</button></td>
+    <td><button class="btn btn-sm btn-danger" onclick="delAcl(${r.id})">delete</button></td>
   </tr>`).join('');
 }
 async function addAcl() {
@@ -334,7 +334,7 @@ async function loadAnnouncements() {
     <td><span class="badge badge-${a.level === 'error' ? 'admin' : a.level === 'warn' ? 'custom' : 'user'}">${levelLabel[a.level] || a.level}</span></td>
     <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? '✅' : '⬜'}</td>
     <td class="audit-time">${new Date(a.created_at).toLocaleString()}</td>
-    <td><button class="danger" onclick="delAnnouncement(${a.id})">delete</button></td>
+    <td><button class="btn btn-sm btn-danger" onclick="delAnnouncement(${a.id})">delete</button></td>
   </tr>`).join('');
 }
 async function addAnnouncement() {

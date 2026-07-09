@@ -37,53 +37,6 @@
     .empty .icon { font-size: 40px; margin-bottom: 12px; }
 
     .create-area { text-align: center; margin-bottom: 20px; }
-    .btn {
-      display: inline-block; padding: 10px 24px; border-radius: 8px;
-      font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent;
-      text-decoration: none; transition: background .15s, color .15s, filter .15s;
-    }
-    .btn-sm { padding: 6px 14px; font-size: 12px; }
-
-    /* Primary — filled accent */
-    .btn-primary {
-      background: var(--primary); color: #fff;
-    }
-    .btn-primary:hover:not(:disabled) {
-      filter: brightness(1.15);
-    }
-
-    /* Outline — neutral, same pattern as common.css button */
-    .btn-outline {
-      background: none; border-color: var(--border); color: var(--text);
-    }
-    .btn-outline:hover:not(:disabled) {
-      background: var(--hover-bg);
-    }
-
-    /* Danger outline — follows --danger variable for dark mode */
-    .btn-danger-outline {
-      background: none; border-color: var(--danger); color: var(--danger);
-    }
-    .btn-danger-outline:hover:not(:disabled) {
-      background: var(--danger); color: #fff;
-    }
-
-    /* Danger filled */
-    .btn-danger {
-      background: var(--danger); color: #fff;
-    }
-    .btn-danger:hover:not(:disabled) {
-      filter: brightness(1.15);
-    }
-
-    /* Disabled state must not use opacity (hurts text readability) */
-    .btn:disabled, .btn:disabled:hover {
-      background: var(--border);
-      color: var(--text-muted);
-      border-color: transparent;
-      cursor: not-allowed;
-      filter: none;
-    }
 
     .modal-overlay {
       display: none; position: fixed; inset: 0; z-index: 100;

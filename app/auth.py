@@ -558,18 +558,8 @@ async def qr_confirm_page(request: Request):
     .user-info img {{ width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }}
     .user-info .name {{ font-size: 15px; font-weight: 600; }}
     .user-info .email {{ font-size: 12px; color: var(--text-muted); margin-top: 2px; }}
-    .btn {{
-      display: inline-block; width: 100%; padding: 12px 24px; border-radius: 8px;
-      font-size: 15px; font-weight: 600; cursor: pointer; border: none;
-      transition: background .15s, color .15s, filter .15s;
-    }}
-    .btn:disabled, .btn:disabled:hover {{
-      background: var(--border); color: var(--text-muted); cursor: not-allowed; filter: none;
-    }}
-    .btn-primary {{ background: var(--primary); color: #fff; }}
-    .btn-primary:hover:not(:disabled) {{ filter: brightness(1.15); }}
-    .btn-cancel {{ background: none; border: 1px solid var(--border); color: var(--text-muted); margin-top: 10px; }}
-    .btn-cancel:hover:not(:disabled) {{ background: var(--hover-bg); }}
+    .btn {{ width: 100%; }}
+    .btn-outline {{ color: var(--text-muted); }}
     .msg {{ margin-top: 16px; display: none; padding: 10px; border-radius: 8px; font-size: 13px; }}
   </style>
 </head>
@@ -585,7 +575,7 @@ async def qr_confirm_page(request: Request):
       </div>
     </div>
     <button class="btn btn-primary" id="confirm-btn">确认授权</button>
-    <button class="btn btn-cancel" onclick="window.location.href='{config.PORTAL_URL}'">取消</button>
+    <button class="btn btn-outline" id="cancel-btn" onclick="window.location.href='{config.PORTAL_URL}'">取消</button>
     <div class="msg" id="msg"></div>
   </div>
   <script>
@@ -607,9 +597,8 @@ async def qr_confirm_page(request: Request):
           msg.textContent = '授权请求已发出';
           btn.textContent = '回到主页 (3)';
           btn.disabled = false;
-          btn.className = 'btn btn-primary';
+          document.getElementById('cancel-btn').style.display = 'none';
           btn.onclick = function() {{ window.location.href = '{config.PORTAL_URL}'; }};
-          document.querySelector('.btn-cancel').style.display = 'none';
           var sec = 3;
           var timer = setInterval(function() {{
             sec--;

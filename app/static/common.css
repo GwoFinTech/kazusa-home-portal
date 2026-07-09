@@ -28,16 +28,41 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent;
 }
+
 a { color: inherit; }
-button {
-  padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px;
-  background: var(--card-bg); color: var(--text); font-size: 12px; cursor: pointer;
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 18px; border: 1px solid transparent; border-radius: 8px;
+  background: var(--card-bg); color: var(--text);
+  font-size: 13px; font-weight: 600; line-height: 1.4;
+  text-decoration: none; white-space: nowrap;
+  cursor: pointer; transition: background .15s, color .15s, filter .15s;
 }
-button:hover { background: var(--hover-bg); }
-button.danger { color: var(--danger); border-color: var(--danger); }
-button.danger:hover { background: #fef2f2; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme]) button.danger:hover { background: #2a1010; } }
-:root[data-theme="dark"] button.danger:hover { background: #2a1010; }
+.btn:hover:not(:disabled) { background: var(--hover-bg); }
+.btn:disabled, .btn:disabled:hover {
+  background: var(--border); color: var(--text-muted); border-color: transparent;
+  cursor: not-allowed; filter: none;
+}
+
+.btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.15); }
+
+.btn-outline {
+  background: none; border-color: var(--border); color: var(--text);
+}
+.btn-outline:hover:not(:disabled) { background: var(--hover-bg); }
+
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover:not(:disabled) { filter: brightness(1.15); }
+
+.btn-danger-outline {
+  background: none; border-color: var(--danger); color: var(--danger);
+}
+.btn-danger-outline:hover:not(:disabled) { background: var(--danger); color: #fff; }
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
 .badge-admin { background: #dbeafe; color: #1d4ed8; }

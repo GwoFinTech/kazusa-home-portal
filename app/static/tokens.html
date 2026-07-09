@@ -28,10 +28,10 @@
       display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px;
       font-weight: 500;
     }
-    .badge-active { background: rgba(34,197,94,.15); color: #16a34a; }
-    .badge-revoked { background: rgba(239,68,68,.12); color: #dc2626; }
-    .badge-expired { background: rgba(234,179,8,.15); color: #ca8a04; }
-    .badge-info { background: rgba(59,130,246,.12); color: #2563eb; }
+    .badge-active { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
+    .badge-revoked { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+    .badge-expired { background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning); }
+    .badge-info { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
 
     .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
     .empty .icon { font-size: 40px; margin-bottom: 12px; }
@@ -40,7 +40,7 @@
     .btn {
       display: inline-block; padding: 10px 24px; border-radius: 8px;
       font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent;
-      text-decoration: none; transition: background .15s, color .15s;
+      text-decoration: none; transition: background .15s, color .15s, filter .15s;
     }
     .btn-sm { padding: 6px 14px; font-size: 12px; }
 
@@ -48,7 +48,7 @@
     .btn-primary {
       background: var(--primary); color: #fff;
     }
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
       filter: brightness(1.15);
     }
 
@@ -56,7 +56,7 @@
     .btn-outline {
       background: none; border-color: var(--border); color: var(--text);
     }
-    .btn-outline:hover {
+    .btn-outline:hover:not(:disabled) {
       background: var(--hover-bg);
     }
 
@@ -64,7 +64,7 @@
     .btn-danger-outline {
       background: none; border-color: var(--danger); color: var(--danger);
     }
-    .btn-danger-outline:hover {
+    .btn-danger-outline:hover:not(:disabled) {
       background: var(--danger); color: #fff;
     }
 
@@ -72,11 +72,18 @@
     .btn-danger {
       background: var(--danger); color: #fff;
     }
-    .btn-danger:hover {
+    .btn-danger:hover:not(:disabled) {
       filter: brightness(1.15);
     }
 
-    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    /* Disabled state must not use opacity (hurts text readability) */
+    .btn:disabled, .btn:disabled:hover {
+      background: var(--border);
+      color: var(--text-muted);
+      border-color: transparent;
+      cursor: not-allowed;
+      filter: none;
+    }
 
     .modal-overlay {
       display: none; position: fixed; inset: 0; z-index: 100;
@@ -98,8 +105,8 @@
     .modal input:focus, .modal select:focus { outline: none; border-color: var(--accent); }
     .modal .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
     .modal .msg { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
-    .modal .msg-ok { background: rgba(34,197,94,.1); color: #16a34a; display: block; }
-    .modal .msg-err { background: rgba(239,68,68,.1); color: #dc2626; display: block; }
+    .modal .msg-ok { background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--success); display: block; }
+    .modal .msg-err { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); display: block; }
 
     .token-value {
       background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
@@ -107,11 +114,12 @@
       margin: 12px 0; user-select: all;
     }
     .token-warn {
-      background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.3);
-      padding: 10px 12px; border-radius: 6px; font-size: 12px; color: #ca8a04;
+      background: color-mix(in srgb, var(--warning) 10%, transparent);
+      border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+      padding: 10px 12px; border-radius: 6px; font-size: 12px; color: var(--warning);
       margin-bottom: 12px; line-height: 1.5;
     }
-    .copied-msg { font-size: 12px; color: #16a34a; display: none; margin-top: 4px; }
+    .copied-msg { font-size: 12px; color: var(--success); display: none; margin-top: 4px; }
     .actions { display: flex; gap: 8px; align-items: center; }
   </style>
 </head>

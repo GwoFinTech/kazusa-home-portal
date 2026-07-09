@@ -39,22 +39,43 @@
     .create-area { text-align: center; margin-bottom: 20px; }
     .btn {
       display: inline-block; padding: 10px 24px; border-radius: 8px;
-      font-size: 14px; font-weight: 600; cursor: pointer; border: none;
-      transition: opacity .15s; text-decoration: none;
+      font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent;
+      text-decoration: none; transition: background .15s, color .15s;
     }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover { opacity: .85; }
-    .btn-danger { background: #dc2626; color: #fff; }
-    .btn-danger:hover { opacity: .85; }
     .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+    /* Primary — filled accent */
+    .btn-primary {
+      background: var(--primary); color: #fff;
+    }
+    .btn-primary:hover {
+      filter: brightness(1.15);
+    }
+
+    /* Outline — neutral, same pattern as common.css button */
     .btn-outline {
-      background: none; border: 1px solid var(--border); color: var(--text);
+      background: none; border-color: var(--border); color: var(--text);
     }
-    .btn-outline:hover { background: var(--hover-bg); }
+    .btn-outline:hover {
+      background: var(--hover-bg);
+    }
+
+    /* Danger outline — follows --danger variable for dark mode */
     .btn-danger-outline {
-      background: none; border: 1px solid rgba(239,68,68,.3); color: #dc2626;
+      background: none; border-color: var(--danger); color: var(--danger);
     }
-    .btn-danger-outline:hover { background: rgba(239,68,68,.08); }
+    .btn-danger-outline:hover {
+      background: var(--danger); color: #fff;
+    }
+
+    /* Danger filled */
+    .btn-danger {
+      background: var(--danger); color: #fff;
+    }
+    .btn-danger:hover {
+      filter: brightness(1.15);
+    }
+
     .btn:disabled { opacity: .4; cursor: not-allowed; }
 
     .modal-overlay {

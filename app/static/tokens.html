@@ -74,6 +74,40 @@
     }
     .copied-msg { font-size: 12px; color: var(--success); display: none; margin-top: 4px; }
     .actions { display: flex; gap: 8px; align-items: center; }
+
+    .help-section { margin-bottom: 20px; }
+    .help-section summary {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; padding: 12px 16px;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      list-style: none; user-select: none;
+    }
+    .help-section summary::-webkit-details-marker { display: none; }
+    .help-section summary::before { content: '▸'; font-size: 12px; color: var(--text-muted); transition: transform .15s; }
+    .help-section[open] summary::before { transform: rotate(90deg); }
+    .help-section summary:hover { background: var(--hover-bg); }
+    .help-body {
+      padding: 16px; background: var(--card-bg); border: 1px solid var(--border);
+      border-top: none; border-radius: 0 0 var(--radius) var(--radius);
+      font-size: 13px; line-height: 1.7; color: var(--text-muted);
+    }
+    .help-body p { margin-bottom: 10px; }
+    .help-body code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: var(--bg); padding: 2px 5px; border-radius: 4px; font-size: 12px;
+    }
+    .help-body pre {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 12px; overflow-x: auto; margin: 10px 0;
+    }
+    .help-body pre code { background: none; padding: 0; }
+    .help-body ul { margin: 8px 0 8px 18px; }
+    .help-body li { margin-bottom: 4px; }
+    .help-tip {
+      background: color-mix(in srgb, var(--primary) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+      border-radius: 6px; padding: 10px 12px; color: var(--primary); margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -89,6 +123,40 @@
     <div class="create-area">
       <button class="btn btn-primary" onclick="openCreate()">+ 创建新 Token</button>
     </div>
+
+    <details class="help-section" id="help-section">
+      <summary>📚 API 使用说明</summary>
+      <div class="help-body">
+        <p>创建的 Token 可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程序化访问所有经过 Traefik <code>kazusa-auth@docker</code> 认证的 <code>*.kazusa.feng.moe</code> 服务。</p>
+
+        <p><strong>基本用法</strong></p>
+        <pre><code>curl -H "Authorization: Bearer hp_xxxxxxxxxxxxxxxxxxx" \
+  https://kazusa.feng.moe/api/me</code></pre>
+
+        <p><strong>可用端点示例</strong></p>
+        <ul>
+          <li><code>GET /api/me</code> — 获取当前登录用户信息</li>
+          <li><code>GET /api/services</code> — 列出所有服务及访问权限</li>
+          <li><code>GET /auth/tokens</code> — 管理自己的 Token</li>
+        </ul>
+
+        <p><strong>请求头规范</strong></p>
+        <ul>
+          <li>必须携带 <code>Authorization: Bearer &lt;token&gt;</code></li>
+          <li>不需要额外的 CSRF Token（Bearer 认证不怕 CSRF）</li>
+          <li>与浏览器 Cookie 认证互斥，同时只需要一种</li>
+        </ul>
+
+        <p><strong>安全提示</strong></p>
+        <ul>
+          <li>Token 仅在创建时展示一次，请立即复制并妥善保管</li>
+          <li>如果怀疑泄露，请立即点击「撤销」，所有使用该 Token 的客户端会立即失去访问权限</li>
+          <li>建议为不同场景创建独立 Token，并设置合理的过期时间</li>
+        </ul>
+
+        <div class="help-tip">💡 小提示：在脚本或 CI 中使用时，建议将 Token 存入环境变量，避免硬编码。</div>
+      </div>
+    </details>
 
     <div id="token-list">
       <div class="empty"><div class="icon">🔑</div>加载中…</div>

@@ -14,4 +14,24 @@
 
 Token format: `hp_<secrets.token_urlsafe(32)>`. SHA256 hashed in DB. Full token shown only once at creation.
 
-Auth flow: `Authorization: Bearer <token>` → `_get_current_user()` + `/auth/verify` (forwardAuth).
+Auth flow: `Authorization: Bearer ***` → `_get_current_user()` + `/auth/verify` (forwardAuth).
+
+## Usage
+
+Create a token from `/account/tokens`, then use it as a Bearer token:
+
+```bash
+curl -H "Authorization: Bearer hp_xxx...xxx" \
+  https://kazusa.feng.moe/api/me
+```
+
+Available endpoints (examples):
+- `GET /api/me` — current user info
+- `GET /api/services` — services and access status
+- `GET /auth/tokens` / `POST /auth/tokens` / `DELETE /auth/tokens/{id}` — token management
+
+Notes:
+- No CSRF token required for Bearer auth.
+- Bearer auth and session cookie are mutually exclusive; only one is needed.
+- Tokens are soft-revoked via `revoked=true`; revoked/expired tokens are rejected immediately.
+- `last_used_at` is updated on every successful Bearer authentication.

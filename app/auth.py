@@ -185,19 +185,73 @@ def _get_csrf_header(request: Request) -> str:
     return request.headers.get("X-CSRF-Token", "")
 
 
+def _get_bearer_token(request: Request) -> Optional[str]:
+    """Extract Bearer token from Authorization header."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    return auth[7:].strip()
+
+
+def _is_bearer_auth(request: Request) -> bool:
+    """Check if the request uses Bearer token auth (not cookie)."""
+    return request.headers.get("Authorization", "").startswith("Bearer ")
+
+
+def _get_user_by_bearer(token_str: str) -> Optional[dict]:
+    """Look up user by API token (SHA256 lookup in home_api_tokens).
+    Returns user info dict or None. Updates last_used_at on each hit."""
+    token_hash = hashlib.sha256(token_str.encode()).hexdigest()
+    try:
+        with db_cursor() as cur:
+            cur.execute("""
+                SELECT u.id, u.email, u.name, u.picture, u.role
+                FROM home_api_tokens t
+                JOIN home_users u ON u.id = t.user_id
+                WHERE t.token_hash = %s
+                  AND t.revoked = FALSE
+                  AND (t.expires_at IS NULL OR t.expires_at > now())
+            """, (token_hash,))
+            user = cur.fetchone()
+            if user:
+                cur.execute(
+                    "UPDATE home_api_tokens SET last_used_at = now() WHERE token_hash = %s",
+                    (token_hash,),
+                )
+            return dict(user) if user else None
+    except Exception as e:
+        logging.warning("API token lookup failed: %s", e)
+        return None
+
+
 def _get_current_user(request: Request) -> Optional[dict]:
-    """Extract user from session cookie."""
+    """Extract user from session cookie OR Authorization: Bearer header.
+    
+    Priority:
+    1. Cookie-based session
+    2. Bearer API token
+    
+    Both paths return the same user dict shape for downstream use.
+    """
+    # 1. Try cookie-based session
     token = request.cookies.get(config.COOKIE)
-    if not token:
-        return None
-    info = _verify_session_token(token)
-    if not info:
-        return None
-    # Fetch fresh user data
-    with db_cursor() as cur:
-        cur.execute("SELECT id, email, name, picture, role FROM home_users WHERE id = %s", (info["user_id"],))
-        user = cur.fetchone()
-    return dict(user) if user else None
+    if token:
+        info = _verify_session_token(token)
+        if info:
+            with db_cursor() as cur:
+                cur.execute(
+                    "SELECT id, email, name, picture, role FROM home_users WHERE id = %s",
+                    (info["user_id"],),
+                )
+                user = cur.fetchone()
+            return dict(user) if user else None
+
+    # 2. Try Bearer token (API token)
+    bearer = _get_bearer_token(request)
+    if bearer:
+        return _get_user_by_bearer(bearer)
+
+    return None
 
 
 def _check_acl(email: str, host: str, role: str = "user") -> bool:
@@ -746,6 +800,126 @@ async def mock_login(request: Request):
     return response
 
 
+# ── Personal API Tokens ─────────────────────────────────
+
+
+@router.post("/auth/tokens")
+@limiter.limit("10/minute")
+async def create_api_token(request: Request):
+    """Create a new personal API token.
+    
+    Returns the full token only once — it will NOT be shown again.
+    Token format: hp_<urlsafe_random> (SHA256-hashed in DB).
+    """
+    user = _get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+    # CSRF check for cookie-based auth
+    if not _is_bearer_auth(request):
+        session_token = request.cookies.get(config.COOKIE, "")
+        expected = _csrf_token(session_token)
+        provided = _get_csrf_header(request)
+        if not provided or not hmac.compare_digest(provided, expected):
+            return JSONResponse({"error": "CSRF mismatch"}, status_code=403)
+
+    body = await request.json()
+    description = (body.get("description") or "").strip()[:200]
+    expires_in = body.get("expires_in_days")
+
+    # Generate token
+    raw = f"hp_{secrets.token_urlsafe(32)}"
+    token_hash = hashlib.sha256(raw.encode()).hexdigest()
+    prefix = raw[:11]  # "hp_xxxxxxx" (incl. prefix)
+
+    # Compute expiry
+    expires_at = None
+    if expires_in is not None and expires_in > 0:
+        expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in)
+
+    with db_cursor() as cur:
+        cur.execute(
+            """INSERT INTO home_api_tokens (user_id, token_hash, description, prefix, expires_at)
+               VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+            (user["id"], token_hash, description, prefix, expires_at),
+        )
+        tid = cur.fetchone()["id"]
+
+    _log_audit(user["email"], "api-token.create", str(tid), description[:60])
+    return {
+        "id": tid,
+        "token": raw,  # SHOWN ONLY ONCE
+        "prefix": prefix,
+        "description": description,
+        "expires_at": expires_at.isoformat() if expires_at else None,
+    }
+
+
+@router.get("/auth/tokens")
+async def list_api_tokens(request: Request):
+    """List the current user's API tokens. Full tokens are NOT returned."""
+    user = _get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+    with db_cursor() as cur:
+        if user.get("role") == "admin":
+            cur.execute("""SELECT t.id, t.user_id, u.email AS user_email, t.prefix,
+                                  t.description, t.expires_at, t.last_used_at,
+                                  t.created_at, t.revoked
+                           FROM home_api_tokens t
+                           JOIN home_users u ON u.id = t.user_id
+                           ORDER BY t.created_at DESC""")
+        else:
+            cur.execute("""SELECT id, user_id, prefix, description, expires_at,
+                                  last_used_at, created_at, revoked
+                           FROM home_api_tokens
+                           WHERE user_id = %s
+                           ORDER BY created_at DESC""", (user["id"],))
+        rows = cur.fetchall()
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        for k in ("created_at", "last_used_at", "expires_at"):
+            if d.get(k):
+                d[k] = d[k].isoformat()
+        result.append(d)
+    return result
+
+
+@router.delete("/auth/tokens/{token_id}")
+@limiter.limit("10/minute")
+async def revoke_api_token(request: Request, token_id: int):
+    """Revoke an API token by ID. Users can only revoke their own tokens."""
+    user = _get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+    # CSRF check for cookie-based auth
+    if not _is_bearer_auth(request):
+        session_token = request.cookies.get(config.COOKIE, "")
+        expected = _csrf_token(session_token)
+        provided = _get_csrf_header(request)
+        if not provided or not hmac.compare_digest(provided, expected):
+            return JSONResponse({"error": "CSRF mismatch"}, status_code=403)
+
+    with db_cursor() as cur:
+        # Admin can revoke any token; users can only revoke their own
+        if user.get("role") == "admin":
+            cur.execute("DELETE FROM home_api_tokens WHERE id = %s RETURNING id", (token_id,))
+        else:
+            cur.execute(
+                "DELETE FROM home_api_tokens WHERE id = %s AND user_id = %s RETURNING id",
+                (token_id, user["id"]),
+            )
+        if not cur.fetchone():
+            return JSONResponse({"error": "token not found"}, status_code=404)
+
+    _log_audit(user["email"], "api-token.revoke", str(token_id))
+    return {"ok": True}
+
+
 # ── Traefik ForwardAuth ─────────────────────────────────
 
 @router.api_route("/auth/verify", methods=["GET", "HEAD"])
@@ -807,8 +981,8 @@ def _require_admin(request: Request) -> Optional[dict]:
     user = _get_current_user(request)
     if not user or user.get("role") != "admin":
         return None
-    # CSRF check for state-changing methods
-    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+    # CSRF check only for state-changing methods AND only for cookie-based auth
+    if request.method in ("POST", "PUT", "DELETE", "PATCH") and not _is_bearer_auth(request):
         session_token = request.cookies.get(config.COOKIE, "")
         expected = _csrf_token(session_token)
         provided = _get_csrf_header(request)

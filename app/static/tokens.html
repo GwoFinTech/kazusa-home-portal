@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="stylesheet" href="/common.css">
+  <title>API Token 管理 — kazusa</title>
+  <style>
+    body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px; }
+    .container { max-width: 720px; width: 100%; }
+
+    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .header h1 { font-size: 22px; font-weight: 700; }
+    .header .sub { font-size: 13px; color: var(--text-muted); }
+    .header .back { font-size: 13px; color: var(--accent); text-decoration: none; margin-left: auto; }
+    .header .back:hover { text-decoration: underline; }
+
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; margin-bottom: 16px;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .card-title { font-weight: 600; font-size: 14px; }
+    .card-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .card-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+    .badge {
+      display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px;
+      font-weight: 500;
+    }
+    .badge-active { background: rgba(34,197,94,.15); color: #16a34a; }
+    .badge-revoked { background: rgba(239,68,68,.12); color: #dc2626; }
+    .badge-expired { background: rgba(234,179,8,.15); color: #ca8a04; }
+    .badge-info { background: rgba(59,130,246,.12); color: #2563eb; }
+
+    .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
+    .empty .icon { font-size: 40px; margin-bottom: 12px; }
+
+    .create-area { text-align: center; margin-bottom: 20px; }
+    .btn {
+      display: inline-block; padding: 10px 24px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; border: none;
+      transition: opacity .15s; text-decoration: none;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { opacity: .85; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { opacity: .85; }
+    .btn-sm { padding: 6px 14px; font-size: 12px; }
+    .btn-outline {
+      background: none; border: 1px solid var(--border); color: var(--text);
+    }
+    .btn-outline:hover { background: var(--hover-bg); }
+    .btn-danger-outline {
+      background: none; border: 1px solid rgba(239,68,68,.3); color: #dc2626;
+    }
+    .btn-danger-outline:hover { background: rgba(239,68,68,.08); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,.5); backdrop-filter: blur(2px);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 28px 24px; max-width: 440px; width: 90%; box-shadow: var(--shadow);
+    }
+    .modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+    .modal label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: var(--text-muted); }
+    .modal input, .modal select {
+      width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg); color: var(--text); font-size: 14px; margin-bottom: 14px;
+      box-sizing: border-box;
+    }
+    .modal input:focus, .modal select:focus { outline: none; border-color: var(--accent); }
+    .modal .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+    .modal .msg { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
+    .modal .msg-ok { background: rgba(34,197,94,.1); color: #16a34a; display: block; }
+    .modal .msg-err { background: rgba(239,68,68,.1); color: #dc2626; display: block; }
+
+    .token-value {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 12px; font-family: monospace; font-size: 13px; word-break: break-all;
+      margin: 12px 0; user-select: all;
+    }
+    .token-warn {
+      background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.3);
+      padding: 10px 12px; border-radius: 6px; font-size: 12px; color: #ca8a04;
+      margin-bottom: 12px; line-height: 1.5;
+    }
+    .copied-msg { font-size: 12px; color: #16a34a; display: none; margin-top: 4px; }
+    .actions { display: flex; gap: 8px; align-items: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>🔑 API Token</h1>
+        <div class="sub">管理你的个人访问令牌，用于程序化访问 *.kazusa.feng.moe 服务</div>
+      </div>
+      <a class="back" href="/">← 返回首页</a>
+    </div>
+
+    <div class="create-area">
+      <button class="btn btn-primary" onclick="openCreate()">+ 创建新 Token</button>
+    </div>
+
+    <div id="token-list">
+      <div class="empty"><div class="icon">🔑</div>加载中…</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="create-modal">
+    <div class="modal">
+      <h2>创建 API Token</h2>
+      <label for="desc">描述</label>
+      <input id="desc" type="text" placeholder="例如：我的笔记本、CI 服务器…" maxlength="200">
+
+      <label for="expires">过期时间</label>
+      <select id="expires">
+        <option value="7">7 天</option>
+        <option value="30" selected>30 天</option>
+        <option value="90">90 天</option>
+        <option value="365">365 天</option>
+        <option value="">永不过期</option>
+      </select>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeCreate()">取消</button>
+        <button class="btn btn-primary" id="create-btn" onclick="doCreate()">创建</button>
+      </div>
+      <div class="msg" id="create-msg"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="reveal-modal">
+    <div class="modal">
+      <h2>✅ Token 已创建</h2>
+      <div class="token-warn">⚠️ 这是你唯一一次看到此 Token，关闭后将无法再次查看。请立即复制并妥善保管！</div>
+      <div class="token-value" id="revealed-token"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="copyToken()">📋 复制 Token</button>
+      <div class="copied-msg" id="copied-msg">✅ 已复制到剪贴板</div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-outline" style="width:100%" onclick="closeReveal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="revoke-modal">
+    <div class="modal">
+      <h2>撤销 Token</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">
+        确定要撤销此 Token 吗？<br>所有使用此 Token 的客户端将立即失去访问权限。
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="closeRevoke()">取消</button>
+        <button class="btn btn-danger" id="revoke-btn" onclick="doRevoke()">确认撤销</button>
+      </div>
+      <div class="msg" id="revoke-msg"></div>
+    </div>
+  </div>
+
+  <script src="/common.js"></script>
+  <script>
+    let tokens = [];
+    let revokeTarget = null;
+    let lastCreatedToken = '';
+
+    (async function init() {
+      try {
+        const r = await apiFetch('/api/me');
+        if (!r.ok || !(await r.json()).authenticated) {
+          window.location.href = '/login';
+          return;
+        }
+      } catch { window.location.href = '/login'; }
+      loadTokens();
+    })();
+
+    async function loadTokens() {
+      const el = document.getElementById('token-list');
+      try {
+        const r = await apiFetch('/auth/tokens');
+        if (!r.ok) throw new Error();
+        tokens = await r.json();
+      } catch {
+        el.innerHTML = '<div class="empty"><div class="icon">❌</div>加载失败</div>';
+        return;
+      }
+
+      if (!tokens.length) {
+        el.innerHTML = '<div class="empty"><div class="icon">🔑</div>还没有 Token<br><span style="font-size:12px">点击上方按钮创建第一个</span></div>';
+        return;
+      }
+
+      el.innerHTML = tokens.map(t => {
+        const expired = t.expires_at && new Date(t.expires_at) < new Date();
+        const badge = t.revoked ? '<span class="badge badge-revoked">已撤销</span>'
+                     : expired ? '<span class="badge badge-expired">已过期</span>'
+                     : '<span class="badge badge-active">有效</span>';
+
+        const desc = t.description || '<span style="color:var(--text-subtle)">无描述</span>';
+        const created = t.created_at ? new Date(t.created_at).toLocaleString('zh-CN') : '';
+        const lastUsed = t.last_used_at ? new Date(t.last_used_at).toLocaleString('zh-CN') : '从未使用';
+        const expiresStr = t.expires_at ? new Date(t.expires_at).toLocaleString('zh-CN') : '永久';
+
+        return `<div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title"><code style="font-size:13px">${esc(t.prefix)}…</code> ${badge}</div>
+              <div class="card-meta">创建于 ${created}</div>
+            </div>
+            ${!t.revoked ? `<button class="btn btn-danger-outline btn-sm" onclick="openRevoke(${t.id})">撤销</button>` : ''}
+          </div>
+          <div class="card-desc">${desc}</div>
+          <div class="card-meta">
+            过期：${expiresStr} &middot; 最后使用：${lastUsed}
+            ${t.user_email ? '&middot; ' + esc(t.user_email) : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function openCreate() {
+      document.getElementById('desc').value = '';
+      document.getElementById('expires').value = '30';
+      document.getElementById('create-msg').style.display = 'none';
+      document.getElementById('create-btn').disabled = false;
+      document.getElementById('create-btn').textContent = '创建';
+      document.getElementById('create-modal').classList.add('active');
+    }
+    function closeCreate() {
+      document.getElementById('create-modal').classList.remove('active');
+    }
+
+    async function doCreate() {
+      const btn = document.getElementById('create-btn');
+      btn.disabled = true;
+      btn.textContent = '创建中…';
+      const msg = document.getElementById('create-msg');
+
+      const desc = document.getElementById('desc').value.trim();
+      const expiresVal = document.getElementById('expires').value;
+      const expiresInDays = expiresVal === '' ? null : parseInt(expiresVal);
+
+      try {
+        const r = await apiFetch('/auth/tokens', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: desc, expires_in_days: expiresInDays }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          msg.className = 'msg msg-err';
+          msg.textContent = data.error || '创建失败';
+          msg.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = '重试';
+          return;
+        }
+
+        closeCreate();
+        lastCreatedToken = data.token;
+        document.getElementById('revealed-token').textContent = lastCreatedToken;
+        document.getElementById('copied-msg').style.display = 'none';
+        document.getElementById('reveal-modal').classList.add('active');
+        loadTokens();
+      } catch {
+        msg.className = 'msg msg-err';
+        msg.textContent = '网络错误';
+        msg.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '重试';
+      }
+    }
+
+    function copyToken() {
+      navigator.clipboard.writeText(lastCreatedToken).then(() => {
+        document.getElementById('copied-msg').style.display = 'block';
+      }).catch(() => {
+        const el = document.getElementById('revealed-token');
+        const range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.getElementById('copied-msg').textContent = '请手动复制 (Ctrl+C)';
+        document.getElementById('copied-msg').style.display = 'block';
+      });
+    }
+    function closeReveal() {
+      document.getElementById('reveal-modal').classList.remove('active');
+    }
+
+    function openRevoke(id) {
+      revokeTarget = id;
+      document.getElementById('revoke-msg').style.display = 'none';
+      document.getElementById('revoke-btn').disabled = false;
+      document.getElementById('revoke-btn').textContent = '确认撤销';
+      document.getElementById('revoke-modal').classList.add('active');
+    }
+    function closeRevoke() {
+      document.getElementById('revoke-modal').classList.remove('active');
+      revokeTarget = null;
+    }
+
+    async function doRevoke() {
+      const btn = document.getElementById('revoke-btn');
+      btn.disabled = true;
+      btn.textContent = '撤销中…';
+      const msg = document.getElementById('revoke-msg');
+
+      try {
+        const r = await apiFetch(`/auth/tokens/${revokeTarget}`, { method: 'DELETE' });
+        if (!r.ok) {
+          const data = await r.json();
+          msg.className = 'msg msg-err';
+          msg.textContent = data.error || '撤销失败';
+          msg.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = '重试';
+          return;
+        }
+        closeRevoke();
+        loadTokens();
+      } catch {
+        msg.className = 'msg msg-err';
+        msg.textContent = '网络错误';
+        msg.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '重试';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -149,7 +149,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins or ["http://localhost:8000"],
     allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "X-CSRF-Token"],
+    allow_headers=["Content-Type", "X-CSRF-Token", "Authorization"],
     allow_credentials=True,
 )
 
@@ -227,6 +227,11 @@ def login_page():
 @app.get("/admin")
 def admin_page(request: Request):
     return FileResponse(os.path.join(STATIC_DIR, "admin.html"))
+
+
+@app.get("/account/tokens")
+def tokens_page(request: Request):
+    return FileResponse(os.path.join(STATIC_DIR, "tokens.html"))
 
 
 @app.get("/common.css")

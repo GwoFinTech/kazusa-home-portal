@@ -186,6 +186,7 @@ async function loadUser() {
           ${u.picture ? `<img src="${esc(u.picture)}" alt="">` : ''}
           <span>${esc(u.name || u.email)}</span>
           ${u.role === 'admin' ? '<a href="/admin">admin</a>' : ''}
+          <a href="/account/tokens">tokens</a>
           <button class="bar-btn" onclick="openScanQR()">${SCAN_SVG} 扫码</button>
           <a href="/auth/logout">logout</a>
         `;

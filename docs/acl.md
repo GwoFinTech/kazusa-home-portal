@@ -22,6 +22,15 @@ INSERT INTO home_role_acl (domain, role) VALUES ('home.kazusa.feng.moe', 'user')
 INSERT INTO home_role_acl (domain, role) VALUES ('quant.kazusa.feng.moe', 'quant');
 ```
 
+### 特殊角色 `user`
+
+**所有已登录用户都隐式拥有 `user` 基准角色**。
+这意味着：
+
+- 角色为 `quant` 的用户，也会自动匹配 `role='user'` 的角色 ACL 规则
+- 只要给用户分配了任何角色（`quant`、`friend`、`admin` 等），他/她都能访问所有 `user` 组下的站点
+- 如果某个站点只希望特定角色访问，请仅创建该角色的规则（如 `role='quant'`），不要创建 `role='user'` 规则
+
 ## 角色预设
 
 在用户首次登录前预分配角色：

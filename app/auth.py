@@ -256,17 +256,25 @@ def _get_current_user(request: Request) -> Optional[dict]:
 
 def _check_acl(email: str, host: str, role: str = "user") -> bool:
     """Check if user is allowed to access host via role ACL then email ACL.
-    
+
     Priority:
     1. home_role_acl — match by (domain, role), role-level bulk authorization
     2. home_acl — match by (domain, email), per-user fine-grained override
+
+    The "user" role is a baseline: every authenticated user implicitly matches
+    role ACL rules whose role is "user", regardless of their actual role.
     """
+    # Every authenticated user implicitly has the "user" baseline role
+    effective_roles = {role, "user"}
+
     # 1. Check role ACL first
     with db_cursor() as cur:
         cur.execute("SELECT domain, role FROM home_role_acl WHERE enabled = TRUE")
         role_rules = cur.fetchall()
     for rule in role_rules:
-        if fnmatch(host, rule["domain"]) and fnmatch(role, rule["role"]):
+        if fnmatch(host, rule["domain"]) and any(
+            fnmatch(eff_role, rule["role"]) for eff_role in effective_roles
+        ):
             return True
 
     # 2. Fall back to per-email ACL

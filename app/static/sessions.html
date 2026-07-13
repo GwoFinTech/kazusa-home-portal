@@ -23,7 +23,8 @@
       background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 14px;
     }
-    .session-icon { font-size: 28px; flex-shrink: 0; }
+    .session-icon { flex-shrink: 0; }
+    .session-icon .lucide { width: 28px; height: 28px; }
     .session-meta { flex: 1; min-width: 0; }
     .session-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .session-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
@@ -36,7 +37,8 @@
     .badge-other { background: color-mix(in srgb, var(--text-muted) 12%, transparent); color: var(--text-muted); }
 
     .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
-    .empty .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty .icon { margin-bottom: 12px; }
+    .empty .icon .lucide { width: 40px; height: 40px; }
 
     .msg {
       display: none; padding: 12px 16px; border-radius: var(--radius); font-size: 13px; margin-bottom: 16px;
@@ -49,24 +51,25 @@
   <div class="container">
     <div class="header">
       <div>
-        <h1>🖥️ 登录设备</h1>
+        <h1><i data-lucide="monitor" aria-hidden="true"></i> 登录设备</h1>
         <div class="sub">查看并管理当前登录的设备和会话</div>
       </div>
-      <a class="back" href="/">← 返回首页</a>
+      <a class="back" href="/"><i data-lucide="arrow-left" aria-hidden="true"></i> 返回首页</a>
     </div>
 
     <div class="toolbar">
-      <button class="btn btn-outline btn-sm" id="logout-all-btn" onclick="revokeAll()">🚪 退出其他设备</button>
+      <button class="btn btn-outline btn-sm" id="logout-all-btn" onclick="revokeAll()"><i data-lucide="log-out" aria-hidden="true"></i> 退出其他设备</button>
       <span class="hint">当前设备不会被退出</span>
     </div>
 
     <div class="msg" id="msg"></div>
 
     <div id="session-list">
-      <div class="empty"><div class="icon">🖥️</div>加载中…</div>
+      <div class="empty"><div class="icon"><i data-lucide="monitor" aria-hidden="true"></i></div>加载中…</div>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="/common.js"></script>
   <script>
   const listEl = document.getElementById('session-list');
@@ -84,8 +87,8 @@
 
   function deviceIcon(ua) {
     const u = (ua || '').toLowerCase();
-    if (u.includes('iphone') || u.includes('ipad') || u.includes('android')) return '📱';
-    return '💻';
+    if (u.includes('iphone') || u.includes('ipad') || u.includes('android')) return icon('smartphone');
+    return icon('laptop');
   }
 
   function deviceName(ua) {
@@ -120,12 +123,14 @@
       const r = await apiFetch('/api/me/sessions');
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
-        listEl.innerHTML = `<div class="empty"><div class="icon">⚠️</div>${esc(data.error || '加载失败')}</div>`;
+        listEl.innerHTML = `<div class="empty"><div class="icon">${icon('triangle-alert')}</div>${esc(data.error || '加载失败')}</div>`;
+        refreshIcons();
         return;
       }
       const sessions = await r.json();
       if (!sessions.length) {
-        listEl.innerHTML = '<div class="empty"><div class="icon">🖥️</div>没有活跃会话</div>';
+        listEl.innerHTML = `<div class="empty"><div class="icon">${icon('monitor')}</div>没有活跃会话</div>`;
+        refreshIcons();
         return;
       }
       listEl.innerHTML = sessions.map(s => `
@@ -146,8 +151,10 @@
           ${s.is_current ? '' : `<button class="btn btn-danger-outline btn-sm" onclick="revoke('${esc(s.id)}')">退出</button>`}
         </div>
       `).join('');
+      refreshIcons();
     } catch (e) {
-      listEl.innerHTML = `<div class="empty"><div class="icon">⚠️</div>加载失败：${esc(e.message)}</div>`;
+      listEl.innerHTML = `<div class="empty"><div class="icon">${icon('triangle-alert')}</div>加载失败：${esc(e.message)}</div>`;
+      refreshIcons();
     }
   }
 

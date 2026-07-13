@@ -34,7 +34,8 @@
     .badge-info { background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); }
 
     .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
-    .empty .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty .icon { margin-bottom: 12px; }
+    .empty .icon .lucide { width: 40px; height: 40px; }
 
     .create-area { text-align: center; margin-bottom: 20px; }
 
@@ -114,18 +115,18 @@
   <div class="container">
     <div class="header">
       <div>
-        <h1>🔑 API Token</h1>
+        <h1><i data-lucide="key-round" aria-hidden="true"></i> API Token</h1>
         <div class="sub">管理你的个人访问令牌，用于程序化访问 *.kazusa.feng.moe 服务</div>
       </div>
-      <a class="back" href="/">← 返回首页</a>
+      <a class="back" href="/"><i data-lucide="arrow-left" aria-hidden="true"></i> 返回首页</a>
     </div>
 
     <div class="create-area">
-      <button class="btn btn-primary" onclick="openCreate()">+ 创建新 Token</button>
+      <button class="btn btn-primary" onclick="openCreate()"><i data-lucide="plus" aria-hidden="true"></i> 创建新 Token</button>
     </div>
 
     <details class="help-section" id="help-section">
-      <summary>📚 API 使用说明</summary>
+      <summary><i data-lucide="book-open" aria-hidden="true"></i> API 使用说明</summary>
       <div class="help-body">
         <p>创建的 Token 可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程序化访问所有经过 Traefik <code>kazusa-auth@docker</code> 认证的 <code>*.kazusa.feng.moe</code> 服务。</p>
 
@@ -154,12 +155,12 @@
           <li>建议为不同场景创建独立 Token，并设置合理的过期时间</li>
         </ul>
 
-        <div class="help-tip">💡 小提示：在脚本或 CI 中使用时，建议将 Token 存入环境变量，避免硬编码。</div>
+        <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> 小提示：在脚本或 CI 中使用时，建议将 Token 存入环境变量，避免硬编码。</div>
       </div>
     </details>
 
     <div id="token-list">
-      <div class="empty"><div class="icon">🔑</div>加载中…</div>
+      <div class="empty"><div class="icon"><i data-lucide="key-round" aria-hidden="true"></i></div>加载中…</div>
     </div>
   </div>
 
@@ -188,11 +189,11 @@
 
   <div class="modal-overlay" id="reveal-modal">
     <div class="modal">
-      <h2>✅ Token 已创建</h2>
-      <div class="token-warn">⚠️ 这是你唯一一次看到此 Token，关闭后将无法再次查看。请立即复制并妥善保管！</div>
+      <h2><i data-lucide="circle-check-big" aria-hidden="true"></i> Token 已创建</h2>
+      <div class="token-warn"><i data-lucide="triangle-alert" aria-hidden="true"></i> 这是你唯一一次看到此 Token，关闭后将无法再次查看。请立即复制并妥善保管！</div>
       <div class="token-value" id="revealed-token"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="copyToken()">📋 复制 Token</button>
-      <div class="copied-msg" id="copied-msg">✅ 已复制到剪贴板</div>
+      <button class="btn btn-primary" style="width:100%" onclick="copyToken()"><i data-lucide="clipboard" aria-hidden="true"></i> 复制 Token</button>
+      <div class="copied-msg" id="copied-msg"><i data-lucide="circle-check-big" aria-hidden="true"></i> 已复制到剪贴板</div>
       <div class="btn-row" style="margin-top:12px">
         <button class="btn btn-outline" style="width:100%" onclick="closeReveal()">关闭</button>
       </div>
@@ -213,6 +214,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="/common.js"></script>
   <script>
     let tokens = [];
@@ -237,12 +239,14 @@
         if (!r.ok) throw new Error();
         tokens = await r.json();
       } catch {
-        el.innerHTML = '<div class="empty"><div class="icon">❌</div>加载失败</div>';
+        el.innerHTML = `<div class="empty"><div class="icon">${icon('circle-x')}</div>加载失败</div>`;
+        refreshIcons();
         return;
       }
 
       if (!tokens.length) {
-        el.innerHTML = '<div class="empty"><div class="icon">🔑</div>还没有 Token<br><span style="font-size:12px">点击上方按钮创建第一个</span></div>';
+        el.innerHTML = `<div class="empty"><div class="icon">${icon('key-round')}</div>还没有 Token<br><span style="font-size:12px">点击上方按钮创建第一个</span></div>`;
+        refreshIcons();
         return;
       }
 
@@ -272,6 +276,7 @@
           </div>
         </div>`;
       }).join('');
+      refreshIcons();
     }
 
     function openCreate() {

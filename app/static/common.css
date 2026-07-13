@@ -31,6 +31,13 @@ body {
 
 a:not(.btn) { color: inherit; }
 
+/* Lucide icons inherit the surrounding UI color and align with text controls. */
+.lucide-icon, .lucide {
+  width: 1em; height: 1em; stroke-width: 1.9;
+  flex: 0 0 auto; vertical-align: -0.14em;
+}
+.btn .lucide { width: 1.05em; height: 1.05em; }
+
 /* ── Buttons ── */
 .btn, a.btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -92,9 +99,10 @@ a:not(.btn) { color: inherit; }
   position: fixed; top: 16px; right: 16px; z-index: 999;
   width: 36px; height: 36px; border-radius: 50%;
   border: 1px solid var(--border); background: var(--card-bg);
-  color: var(--text-muted); font-size: 16px; cursor: pointer;
+  color: var(--text-muted); cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background .15s, color .15s;
   box-shadow: var(--shadow);
 }
 .theme-toggle:hover { background: var(--hover-bg); color: var(--text); }
+.theme-toggle .lucide { width: 17px; height: 17px; }

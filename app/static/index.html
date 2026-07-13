@@ -138,7 +138,7 @@
 <!-- QR Show Modal (unauthenticated: display QR for scanning) -->
 <div id="qr-show-overlay" class="qr-overlay" onclick="if(event.target===this)closeShowQR()">
   <div class="qr-modal">
-    <button class="qr-close" onclick="closeShowQR()">&times;</button>
+    <button class="qr-close" onclick="closeShowQR()" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
     <h2>扫码登录</h2>
     <p>用已登录的设备扫描此二维码</p>
     <div id="qr-show-display"></div>
@@ -149,7 +149,7 @@
 <!-- QR Scan Modal (authenticated: open camera to scan) -->
 <div id="qr-scan-overlay" class="qr-overlay" onclick="if(event.target===this)closeScanQR()">
   <div class="qr-modal">
-    <button class="qr-close" onclick="closeScanQR()">&times;</button>
+    <button class="qr-close" onclick="closeScanQR()" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
     <h2>扫码授权登录</h2>
     <p>对准另一台设备上的二维码</p>
     <video id="scanner-video" autoplay playsinline></video>
@@ -158,6 +158,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script src="/common.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
@@ -166,7 +167,7 @@ const subtitle = document.getElementById('subtitle');
 const userBar = document.getElementById('user-bar');
 const annDiv = document.getElementById('announcements');
 
-const SCAN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>';
+const SCAN_ICON = () => icon('scan-line');
 
 async function loadUser() {
   try {
@@ -182,9 +183,10 @@ async function loadUser() {
           ${u.role === 'admin' ? '<a href="/admin">admin</a>' : ''}
           <a href="/account/tokens">tokens</a>
           <a href="/account/sessions">设备</a>
-          <button class="bar-btn" onclick="openScanQR()">${SCAN_SVG} 扫码</button>
+          <button class="bar-btn" onclick="openScanQR()">${SCAN_ICON()} 扫码</button>
           <a href="/auth/logout">logout</a>
         `;
+        refreshIcons();
         return;
       }
     }
@@ -196,9 +198,10 @@ async function loadUser() {
     使用 Google 登录
   </button>
   <button class="btn btn-outline" onclick="openShowQR()">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><path d="M17 14h3v3"/><path d="M20 17v3h-3"/><path d="M14 20h3"/></svg>
+    ${SCAN_ICON()}
     扫码登录
   </button>`;
+  refreshIcons();
 }
 
 function statusClass(s) {
@@ -224,9 +227,10 @@ async function loadAnnouncements() {
     annDiv.innerHTML = items.map(a => `
       <div class="announcement ${a.level}" style="display:flex">
         <span>${esc(a.message)}</span>
-        <span class="dismiss" onclick="dismissAnnouncement(${a.id}, this)">✕</span>
+        <button class="dismiss" onclick="dismissAnnouncement(${a.id}, this)" aria-label="关闭公告">${icon('x')}</button>
       </div>
     `).join('');
+    refreshIcons();
   } catch {}
 }
 

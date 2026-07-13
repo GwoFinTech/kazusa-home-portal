@@ -42,7 +42,7 @@
   </style>
 </head>
 <body>
-  <a href="/" class="back">← back</a>
+  <a href="/" class="back"><i data-lucide="arrow-left" aria-hidden="true"></i> back</a>
   <h1>admin</h1>
   <div id="denied" style="display:none"><p>access denied</p></div>
   <div id="panel" style="display:none">
@@ -132,6 +132,7 @@
     </div>
   </div>
 
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script src="/common.js"></script>
 <script>
 const msg = document.getElementById('msg');
@@ -184,10 +185,11 @@ async function loadRoleAcl() {
     <tr>
       <td><code>${esc(r.domain)}</code></td>
       <td><span class="badge badge-${r.role === 'admin' ? 'admin' : r.role === 'user' ? 'user' : 'custom'}">${esc(r.role)}</span></td>
-      <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? '✅' : '⬜'}</td>
+      <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
       <td><button class="btn btn-sm btn-danger" onclick="delRoleAcl(${r.id})">delete</button></td>
     </tr>
   `).join('');
+  refreshIcons();
 }
 async function addRoleAcl() {
   const domain = document.getElementById('racl-domain').value.trim();
@@ -302,9 +304,10 @@ async function loadAcl() {
   document.getElementById('acl-body').innerHTML = rules.map(r => `<tr>
     <td>${esc(r.domain)}</td>
     <td>${esc(r.email)}</td>
-    <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? '✅' : '⬜'}</td>
+    <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
     <td><button class="btn btn-sm btn-danger" onclick="delAcl(${r.id})">delete</button></td>
   </tr>`).join('');
+  refreshIcons();
 }
 async function addAcl() {
   const domain = document.getElementById('acl-domain').value.trim();
@@ -332,10 +335,11 @@ async function loadAnnouncements() {
   document.getElementById('ann-body').innerHTML = items.map(a => `<tr>
     <td>${esc(a.message)}</td>
     <td><span class="badge badge-${a.level === 'error' ? 'admin' : a.level === 'warn' ? 'custom' : 'user'}">${levelLabel[a.level] || a.level}</span></td>
-    <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? '✅' : '⬜'}</td>
+    <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
     <td class="audit-time">${new Date(a.created_at).toLocaleString()}</td>
     <td><button class="btn btn-sm btn-danger" onclick="delAnnouncement(${a.id})">delete</button></td>
   </tr>`).join('');
+  refreshIcons();
 }
 async function addAnnouncement() {
   const message = document.getElementById('ann-message').value.trim();
@@ -366,6 +370,7 @@ async function loadAudit() {
     <td>${esc(l.target)}</td>
     <td style="color:var(--text-muted);font-size:12px">${esc(l.details)}</td>
   </tr>`).join('');
+  refreshIcons();
 }
 
 init();

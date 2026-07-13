@@ -8,9 +8,21 @@ function apiFetch(url, opts = {}) {
   return fetch(url, opts);
 }
 
+/* Lucide is loaded before this file on every static page. Keep dynamic icons
+   declarative so re-rendered content remains consistent with the static UI. */
+function icon(name, className = '', label = '') {
+  const safeName = String(name).replace(/[^a-z0-9-]/g, '');
+  const safeClass = String(className).replace(/[^a-z0-9_ -]/g, '');
+  const accessible = label ? `role="img" aria-label="${esc(label)}"` : 'aria-hidden="true"';
+  return `<i data-lucide="${safeName}" class="lucide-icon ${safeClass}" ${accessible}></i>`;
+}
+function refreshIcons() {
+  window.lucide?.createIcons();
+}
+
 /* ── Theme toggle (3-state: auto → light → dark → auto) ── */
 (function() {
-  const ICONS = { auto: '🖥️', light: '☀️', dark: '🌙' };
+  const ICONS = { auto: 'monitor', light: 'sun', dark: 'moon' };
   const TITLES = { auto: '跟随系统', light: '浅色模式', dark: '深色模式' };
   const ORDER = ['auto', 'light', 'dark'];
 
@@ -42,13 +54,15 @@ function apiFetch(url, opts = {}) {
       const cur = currentTheme();
       const next = ORDER[(ORDER.indexOf(cur) + 1) % ORDER.length];
       applyTheme(next);
-      btn.textContent = ICONS[next];
+      btn.innerHTML = icon(ICONS[next]);
+      refreshIcons();
       btn.title = TITLES[next];
     };
     const cur = currentTheme();
-    btn.textContent = ICONS[cur];
+    btn.innerHTML = icon(ICONS[cur]);
     btn.title = TITLES[cur];
     document.body.appendChild(btn);
+    refreshIcons();
 
     // Update button when system preference changes (only matters in auto mode)
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

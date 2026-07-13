@@ -72,7 +72,8 @@ def _error_page(title: str, icon: str, message: str, action_url: str, action_tex
     .container {{
       text-align: center; padding: 48px 32px; max-width: 400px;
     }}
-    .icon {{ font-size: 48px; margin-bottom: 16px; }}
+    .icon {{ margin-bottom: 16px; }}
+    .icon svg {{ width: 48px; height: 48px; stroke-width: 1.8; }}
     h1 {{ font-size: 20px; font-weight: 600; margin-bottom: 8px; }}
     p {{ color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }}
     a {{
@@ -86,12 +87,14 @@ def _error_page(title: str, icon: str, message: str, action_url: str, action_tex
 </head>
 <body>
   <div class="container">
-    <div class="icon">{icon}</div>
+    <div class="icon"><i data-lucide="{icon}" aria-hidden="true"></i></div>
     <h1>{title}</h1>
     <p>{message}</p>
     <a href="{action_url}">{action_text}</a>
     <div class="footer">kazusa home portal</div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script>lucide.createIcons();</script>
 </body>
 </html>"""
 
@@ -653,7 +656,7 @@ async def qr_confirm_page(request: Request):
     sid = request.query_params.get("sid", "")
     if not sid:
         return HTMLResponse(_error_page(
-            title="无效链接", icon="❌",
+            title="无效链接", icon="circle-x",
             message="二维码链接无效或已过期。",
             action_url=config.PORTAL_URL, action_text="返回首页", status=400,
         ), status_code=400)
@@ -661,7 +664,7 @@ async def qr_confirm_page(request: Request):
     s = _qr_store.get(sid)
     if not s or s.expires_at < time.time():
         return HTMLResponse(_error_page(
-            title="二维码已过期", icon="⏰",
+            title="二维码已过期", icon="clock-3",
             message="此二维码已失效，请在另一台设备上重新生成。",
             action_url=config.PORTAL_URL, action_text="返回首页", status=410,
         ), status_code=410)
@@ -828,7 +831,7 @@ async def qr_token(request: Request):
     s = _qr_store.get(sid)
     if not s or not s.token:
         return HTMLResponse(_error_page(
-            title="登录失败", icon="❌",
+            title="登录失败", icon="circle-x",
             message="二维码已过期或已使用，请重新扫码。",
             action_url=config.PORTAL_URL, action_text="返回首页", status=410,
         ), status_code=410)
@@ -1082,7 +1085,7 @@ async def auth_verify(request: Request, response: Response):
         login_url = f"{config.PORTAL_URL}/auth/login?return={original_url}"
         return HTMLResponse(_error_page(
             title="需要登录",
-            icon="🔒",
+            icon="lock-keyhole",
             message="你还未登录，请先登录后再访问此页面。",
             action_url=login_url,
             action_text="使用 Google 账号登录",
@@ -1093,7 +1096,7 @@ async def auth_verify(request: Request, response: Response):
     if not _check_acl(user["email"], forwarded_host, user.get("role", "user")):
         return HTMLResponse(_error_page(
             title="无权访问",
-            icon="🚫",
+            icon="ban",
             message=f"你的账号 <strong>{html.escape(user['email'])}</strong> 没有访问此应用的权限。<br>如需开通，请联系管理员。",
             action_url=config.PORTAL_URL,
             action_text="返回主页",

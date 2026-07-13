@@ -26,6 +26,7 @@ from slowapi.util import get_remote_address
 
 from . import config
 from .db import db_cursor
+from . import schemas
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
@@ -95,7 +96,20 @@ def _error_page(title: str, icon: str, message: str, action_url: str, action_tex
 </html>"""
 
 
-def _make_session_token(user_id: int, email: str) -> str:
+def _client_ip(request: Request) -> str:
+    """Extract real client IP from Traefik-forwarded headers or direct connection."""
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("X-Real-Ip", "")
+    if real_ip:
+        return real_ip.strip()
+    if request.client:
+        return request.client.host or ""
+    return ""
+
+
+def _make_session_token(user_id: int, email: str, request: Request | None = None) -> str:
     """Create a signed session token and store its hash in home_sessions.
 
     Token format (new): user_id.email.timestamp.nonce.signature
@@ -111,6 +125,8 @@ def _make_session_token(user_id: int, email: str) -> str:
     # Store token hash in DB for server-side revocation
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     expires_at = datetime.fromtimestamp(int(ts) + config.MAX_AGE, tz=timezone.utc)
+    ip_addr = _client_ip(request) if request else ""
+    user_agent = request.headers.get("User-Agent", "")[:512] if request else ""
     try:
         with db_cursor() as cur:
             # Purge expired sessions
@@ -122,8 +138,9 @@ def _make_session_token(user_id: int, email: str) -> str:
                 (user_id, user_id),
             )
             cur.execute(
-                "INSERT INTO home_sessions (id, user_id, expires_at) VALUES (%s, %s, %s)",
-                (token_hash, user_id, expires_at),
+                "INSERT INTO home_sessions (id, user_id, expires_at, ip_addr, user_agent, last_used_at) "
+                "VALUES (%s, %s, %s, %s, %s, now())",
+                (token_hash, user_id, expires_at, ip_addr, user_agent),
             )
     except Exception as e:
         logging.warning("Failed to store session hash: %s", e)
@@ -411,7 +428,7 @@ async def auth_callback(request: Request, code: str = "", state: str = ""):
             cur.execute("UPDATE home_users SET role = 'admin' WHERE id = %s AND role != 'admin'", (user_id,))
 
     # Create session token
-    token = _make_session_token(user_id, email)
+    token = _make_session_token(user_id, email, request)
 
     # Set cookie and redirect
     response = RedirectResponse(return_url)
@@ -452,6 +469,97 @@ async def auth_me(request: Request):
         return JSONResponse({"authenticated": False}, status_code=401)
     token = request.cookies.get(config.COOKIE, "")
     return {"authenticated": True, "csrf": _csrf_token(token), **user}
+
+
+@router.get("/api/me/sessions")
+async def list_sessions(request: Request):
+    """List the current user's active sessions with device metadata."""
+    user = _get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+    current_token_hash = ""
+    token = request.cookies.get(config.COOKIE, "")
+    if token:
+        current_token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    with db_cursor() as cur:
+        cur.execute(
+            """SELECT id, user_id, created_at, expires_at, ip_addr, user_agent, last_used_at
+               FROM home_sessions
+               WHERE user_id = %s AND expires_at > now()
+               ORDER BY created_at DESC""",
+            (user["id"],),
+        )
+        rows = cur.fetchall()
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        d["is_current"] = (d["id"] == current_token_hash)
+        for k in ("created_at", "expires_at", "last_used_at"):
+            if d.get(k):
+                d[k] = d[k].isoformat()
+        result.append(d)
+    return result
+
+
+@router.delete("/api/me/sessions/{session_id}")
+async def revoke_session(request: Request, session_id: str):
+    """Revoke a single session by its token hash. Users can only revoke their own sessions."""
+    user = _get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+    # CSRF check for cookie-based auth
+    if not _is_bearer_auth(request):
+        session_token = request.cookies.get(config.COOKIE, "")
+        expected = _csrf_token(session_token)
+        provided = _get_csrf_header(request)
+        if not provided or not hmac.compare_digest(provided, expected):
+            return JSONResponse({"error": "CSRF mismatch"}, status_code=403)
+
+    with db_cursor() as cur:
+        cur.execute(
+            "DELETE FROM home_sessions WHERE id = %s AND user_id = %s RETURNING id",
+            (session_id, user["id"]),
+        )
+        if not cur.fetchone():
+            return JSONResponse({"error": "session not found"}, status_code=404)
+
+    _log_audit(user["email"], "session.revoke", session_id[:16])
+    return {"ok": True}
+
+
+@router.delete("/api/me/sessions")
+async def revoke_all_sessions(request: Request):
+    """Revoke all sessions except the current one."""
+    user = _get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "unauthenticated"}, status_code=401)
+
+    # CSRF check for cookie-based auth
+    if not _is_bearer_auth(request):
+        session_token = request.cookies.get(config.COOKIE, "")
+        expected = _csrf_token(session_token)
+        provided = _get_csrf_header(request)
+        if not provided or not hmac.compare_digest(provided, expected):
+            return JSONResponse({"error": "CSRF mismatch"}, status_code=403)
+
+    current_token_hash = ""
+    token = request.cookies.get(config.COOKIE, "")
+    if token:
+        current_token_hash = hashlib.sha256(token.encode()).hexdigest()
+
+    with db_cursor() as cur:
+        cur.execute(
+            "DELETE FROM home_sessions WHERE user_id = %s AND id != %s",
+            (user["id"], current_token_hash),
+        )
+        count = cur.rowcount
+
+    _log_audit(user["email"], "session.revoke-all", f"{count} sessions")
+    return {"ok": True, "revoked_count": count}
 
 
 # ── QR Code Login (device-to-device) ─────────────────────
@@ -673,7 +781,7 @@ async def qr_confirm_page(request: Request):
 
 
 @router.post("/auth/qr/confirm")
-async def qr_confirm(request: Request):
+async def qr_confirm(request: Request, body: schemas.QRConfirmRequest):
     """Confirm QR login. Authenticated Device A authorizes Device B."""
     user = _get_current_user(request)
     if not user:
@@ -686,8 +794,7 @@ async def qr_confirm(request: Request):
     if not provided_csrf or not hmac.compare_digest(provided_csrf, expected_csrf):
         return JSONResponse({"error": "CSRF mismatch"}, status_code=403)
 
-    body = await request.json()
-    sid = body.get("sid", "")
+    sid = body.sid
     if not sid:
         return JSONResponse({"error": "missing sid"}, status_code=400)
 
@@ -700,7 +807,7 @@ async def qr_confirm(request: Request):
         return JSONResponse({"error": "QR session expired"}, status_code=410)
 
     # Generate a real session token for Device B
-    token = _make_session_token(user["id"], user["email"])
+    token = _make_session_token(user["id"], user["email"], request)
     s.status = "confirmed"
     s.user_id = user["id"]
     s.email = user["email"]
@@ -770,7 +877,7 @@ def _is_loopback(request: Request) -> bool:
 
 
 @router.post("/auth/mock-login")
-async def mock_login(request: Request):
+async def mock_login(request: Request, body: schemas.MockLoginRequest | None = None):
     """
     Create a real session cookie without OAuth, for local testing.
     Only accessible from 127.0.0.1 / ::1.
@@ -785,12 +892,7 @@ async def mock_login(request: Request):
     if not _is_loopback(request):
         return JSONResponse({"error": "mock-login only available from loopback"}, status_code=403)
 
-    # Parse optional body
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    email = (body.get("email") or config.ADMIN_EMAIL).strip()
+    email = (body.email if body and body.email else config.ADMIN_EMAIL or "").strip()
     if not email:
         return JSONResponse({"error": "no email and no ADMIN_EMAIL configured"}, status_code=400)
 
@@ -810,7 +912,7 @@ async def mock_login(request: Request):
         user_id = user["id"]
 
     # Create a real signed session token (same as OAuth callback)
-    token = _make_session_token(user_id, email)
+    token = _make_session_token(user_id, email, request)
 
     # Build response with Set-Cookie
     result = {
@@ -838,9 +940,9 @@ async def mock_login(request: Request):
 
 @router.post("/auth/tokens")
 @limiter.limit("10/minute")
-async def create_api_token(request: Request):
+async def create_api_token(request: Request, body: schemas.CreateTokenRequest):
     """Create a new personal API token.
-    
+
     Returns the full token only once — it will NOT be shown again.
     Token format: hp_<urlsafe_random> (SHA256-hashed in DB).
     """
@@ -856,9 +958,8 @@ async def create_api_token(request: Request):
         if not provided or not hmac.compare_digest(provided, expected):
             return JSONResponse({"error": "CSRF mismatch"}, status_code=403)
 
-    body = await request.json()
-    description = (body.get("description") or "").strip()[:200]
-    expires_in = body.get("expires_in_days")
+    description = body.description.strip()[:200]
+    expires_in = body.expires_in_days
 
     # Generate token
     raw = f"hp_{secrets.token_urlsafe(32)}"
@@ -879,13 +980,13 @@ async def create_api_token(request: Request):
         tid = cur.fetchone()["id"]
 
     _log_audit(user["email"], "api-token.create", str(tid), description[:60])
-    return {
-        "id": tid,
-        "token": raw,  # SHOWN ONLY ONCE
-        "prefix": prefix,
-        "description": description,
-        "expires_at": expires_at.isoformat() if expires_at else None,
-    }
+    return schemas.TokenResponse(
+        id=tid,
+        token=raw,
+        prefix=prefix,
+        description=description,
+        expires_at=expires_at.isoformat() if expires_at else None,
+    ).model_dump()
 
 
 @router.get("/auth/tokens")
@@ -1041,12 +1142,11 @@ async def list_users(request: Request):
 
 @router.post("/api/admin/users/{user_id}/role")
 @limiter.limit("30/minute")
-async def update_user_role(request: Request, user_id: int):
+async def update_user_role(request: Request, user_id: int, body: schemas.UpdateUserRoleRequest):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
-    new_role = body.get("role", "user").strip()
+    new_role = body.role.strip()
     if not new_role:
         return JSONResponse({"error": "role must not be empty"}, status_code=400)
     with db_cursor() as cur:
@@ -1081,13 +1181,12 @@ async def list_acl(request: Request):
 
 
 @router.post("/api/admin/acl")
-async def create_acl(request: Request):
+async def create_acl(request: Request, body: schemas.ACLRuleCreate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
-    domain = body.get("domain", "").strip()
-    email = body.get("email", "").strip()
+    domain = body.domain.strip()
+    email = body.email.strip()
     if not domain or not email:
         return JSONResponse({"error": "domain and email required"}, status_code=400)
     with db_cursor() as cur:
@@ -1098,18 +1197,17 @@ async def create_acl(request: Request):
 
 
 @router.put("/api/admin/acl/{rule_id}")
-async def update_acl(request: Request, rule_id: int):
+async def update_acl(request: Request, rule_id: int, body: schemas.ACLRuleUpdate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
     with db_cursor() as cur:
-        if "enabled" in body:
-            cur.execute("UPDATE home_acl SET enabled = %s WHERE id = %s", (body["enabled"], rule_id))
-        if "domain" in body:
-            cur.execute("UPDATE home_acl SET domain = %s WHERE id = %s", (body["domain"], rule_id))
-        if "email" in body:
-            cur.execute("UPDATE home_acl SET email = %s WHERE id = %s", (body["email"], rule_id))
+        if body.enabled is not None:
+            cur.execute("UPDATE home_acl SET enabled = %s WHERE id = %s", (body.enabled, rule_id))
+        if body.domain is not None:
+            cur.execute("UPDATE home_acl SET domain = %s WHERE id = %s", (body.domain.strip(), rule_id))
+        if body.email is not None:
+            cur.execute("UPDATE home_acl SET email = %s WHERE id = %s", (body.email.strip(), rule_id))
     return {"ok": True}
 
 
@@ -1140,13 +1238,12 @@ async def list_role_acl(request: Request):
 
 
 @router.post("/api/admin/role-acl")
-async def create_role_acl(request: Request):
+async def create_role_acl(request: Request, body: schemas.RoleACLRuleCreate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
-    domain = body.get("domain", "").strip()
-    role = body.get("role", "").strip()
+    domain = body.domain.strip()
+    role = body.role.strip()
     if not domain or not role:
         return JSONResponse({"error": "domain and role required"}, status_code=400)
     with db_cursor() as cur:
@@ -1160,18 +1257,17 @@ async def create_role_acl(request: Request):
 
 
 @router.put("/api/admin/role-acl/{rule_id}")
-async def update_role_acl(request: Request, rule_id: int):
+async def update_role_acl(request: Request, rule_id: int, body: schemas.RoleACLRuleUpdate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
     with db_cursor() as cur:
-        if "enabled" in body:
-            cur.execute("UPDATE home_role_acl SET enabled = %s WHERE id = %s", (body["enabled"], rule_id))
-        if "domain" in body:
-            cur.execute("UPDATE home_role_acl SET domain = %s WHERE id = %s", (body["domain"], rule_id))
-        if "role" in body:
-            cur.execute("UPDATE home_role_acl SET role = %s WHERE id = %s", (body["role"], rule_id))
+        if body.enabled is not None:
+            cur.execute("UPDATE home_role_acl SET enabled = %s WHERE id = %s", (body.enabled, rule_id))
+        if body.domain is not None:
+            cur.execute("UPDATE home_role_acl SET domain = %s WHERE id = %s", (body.domain.strip(), rule_id))
+        if body.role is not None:
+            cur.execute("UPDATE home_role_acl SET role = %s WHERE id = %s", (body.role.strip(), rule_id))
     return {"ok": True}
 
 
@@ -1202,13 +1298,12 @@ async def list_role_presets(request: Request):
 
 
 @router.post("/api/admin/role-presets")
-async def create_role_preset(request: Request):
+async def create_role_preset(request: Request, body: schemas.RolePresetCreate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
-    email = body.get("email", "").strip()
-    role = body.get("role", "").strip()
+    email = body.email.strip()
+    role = body.role.strip()
     if not email or not role:
         return JSONResponse({"error": "email and role required"}, status_code=400)
     with db_cursor() as cur:
@@ -1221,16 +1316,15 @@ async def create_role_preset(request: Request):
 
 
 @router.put("/api/admin/role-presets/{preset_id}")
-async def update_role_preset(request: Request, preset_id: int):
+async def update_role_preset(request: Request, preset_id: int, body: schemas.RolePresetUpdate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
     with db_cursor() as cur:
-        if "email" in body:
-            cur.execute("UPDATE home_role_presets SET email = %s WHERE id = %s", (body["email"].strip(), preset_id))
-        if "role" in body:
-            cur.execute("UPDATE home_role_presets SET role = %s WHERE id = %s", (body["role"].strip(), preset_id))
+        if body.email is not None:
+            cur.execute("UPDATE home_role_presets SET email = %s WHERE id = %s", (body.email.strip(), preset_id))
+        if body.role is not None:
+            cur.execute("UPDATE home_role_presets SET role = %s WHERE id = %s", (body.role.strip(), preset_id))
     return {"ok": True}
 
 
@@ -1301,17 +1395,14 @@ async def list_all_announcements(request: Request):
 
 
 @router.post("/api/admin/announcements")
-async def create_announcement(request: Request):
+async def create_announcement(request: Request, body: schemas.AnnouncementCreate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
-    message = body.get("message", "").strip()
-    level = body.get("level", "info").strip()
+    message = body.message.strip()
+    level = body.level
     if not message:
         return JSONResponse({"error": "message required"}, status_code=400)
-    if level not in ("info", "warn", "error"):
-        level = "info"
     with db_cursor() as cur:
         cur.execute(
             "INSERT INTO home_announcements (message, level, created_by) VALUES (%s, %s, %s) RETURNING id",
@@ -1323,16 +1414,17 @@ async def create_announcement(request: Request):
 
 
 @router.put("/api/admin/announcements/{ann_id}")
-async def update_announcement(request: Request, ann_id: int):
+async def update_announcement(request: Request, ann_id: int, body: schemas.AnnouncementUpdate):
     admin = _require_admin(request)
     if not admin:
         return JSONResponse({"error": "forbidden"}, status_code=403)
-    body = await request.json()
     with db_cursor() as cur:
-        if "active" in body:
-            cur.execute("UPDATE home_announcements SET active = %s WHERE id = %s", (body["active"], ann_id))
-        if "message" in body:
-            cur.execute("UPDATE home_announcements SET message = %s WHERE id = %s", (body["message"].strip(), ann_id))
+        if body.active is not None:
+            cur.execute("UPDATE home_announcements SET active = %s WHERE id = %s", (body.active, ann_id))
+        if body.message is not None:
+            cur.execute("UPDATE home_announcements SET message = %s WHERE id = %s", (body.message.strip(), ann_id))
+        if body.level is not None:
+            cur.execute("UPDATE home_announcements SET level = %s WHERE id = %s", (body.level, ann_id))
     _log_audit(admin["email"], "announcement.update", str(ann_id))
     return {"ok": True}
 

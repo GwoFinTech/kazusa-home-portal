@@ -74,6 +74,9 @@
     .card .badge { position: absolute; top: 8px; right: 8px; font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; font-weight: 500; }
     .badge-login { background: var(--primary); color: #fff; }
     .badge-role { background: var(--warning); color: #fff; }
+    .badge-health-healthy { background: var(--success); color: #fff; }
+    .badge-health-unhealthy { background: var(--danger); color: #fff; }
+    .badge-health-unknown { background: var(--text-subtle); color: #fff; }
 
     /* QR overlay (shared for show-QR and scan-QR) */
     .qr-overlay {
@@ -178,6 +181,7 @@ async function loadUser() {
           <span>${esc(u.name || u.email)}</span>
           ${u.role === 'admin' ? '<a href="/admin">admin</a>' : ''}
           <a href="/account/tokens">tokens</a>
+          <a href="/account/sessions">设备</a>
           <button class="bar-btn" onclick="openScanQR()">${SCAN_SVG} 扫码</button>
           <a href="/auth/logout">logout</a>
         `;
@@ -242,9 +246,16 @@ async function loadServices() {
       const isUnauth = s.access === 'unauthenticated';
       const isDenied = s.access === 'denied';
       const disabled = !canAccess && s.url;
-      const badge = isUnauth ? '<span class="badge badge-login">需要登录</span>'
-                  : isDenied ? '<span class="badge badge-role">权限不足</span>'
-                  : '';
+      let badge = '';
+      if (isUnauth) {
+        badge = '<span class="badge badge-login">需要登录</span>';
+      } else if (isDenied) {
+        badge = '<span class="badge badge-role">权限不足</span>';
+      } else if (s.health && s.health.status === 'unhealthy') {
+        badge = '<span class="badge badge-health-unhealthy" title="' + esc(s.health.detail || '') + '">访问异常</span>';
+      } else if (s.health && s.health.status === 'unknown') {
+        badge = '<span class="badge badge-health-unknown">未检测</span>';
+      }
       return `
         <a class="card ${disabled ? 'disabled' : ''}" href="${canAccess ? esc(s.url) : '#'}" target="_blank" rel="noopener"
            ${!s.url ? 'style="pointer-events:none;opacity:.5"' : ''}>

@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
 from .auth import router as auth_router, _get_current_user, _check_acl, _csrf_token, limiter as auth_limiter
-from .db import init_pool, close_pool
+from .db import init_pool, close_pool, db_cursor
 from . import config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -130,6 +130,86 @@ def discover_services() -> list[ServiceEntry]:
     return _svc_cache.get()
 
 
+# ── Service health probing (async, cached) ───────────────────
+
+class _HealthCache:
+    """Cache HTTP probe results per service URL."""
+
+    def __init__(self, ttl: int = 30):
+        self.ttl = ttl
+        self._data: dict[str, dict] = {}
+        self._ts: dict[str, float] = {}
+        self._lock = threading.Lock()
+        self._refreshing: set[str] = set()
+
+    def get(self, url: str) -> dict:
+        now = time.time()
+        with self._lock:
+            if url in self._ts and now - self._ts[url] < self.ttl:
+                return self._data.get(url, {"status": "unknown"})
+
+        if url not in self._refreshing:
+            self._refreshing.add(url)
+            threading.Thread(target=self._refresh, args=(url,), daemon=True).start()
+
+        with self._lock:
+            return self._data.get(url, {"status": "unknown"})
+
+    def _refresh(self, url: str):
+        try:
+            result = _probe_service_sync(url)
+            with self._lock:
+                self._data[url] = result
+                self._ts[url] = time.time()
+        except Exception as e:
+            logger.warning("Health probe failed for %s: %s", url, e)
+        finally:
+            self._refreshing.discard(url)
+
+    def invalidate(self, url: str):
+        with self._lock:
+            self._ts.pop(url, None)
+
+
+_health_cache = _HealthCache(ttl=30)
+
+
+def _probe_service_sync(url: str) -> dict:
+    """Synchronous HTTP probe; runs in a background thread."""
+    import urllib.request
+    from urllib.error import HTTPError, URLError
+
+    if not url:
+        return {"status": "unknown"}
+
+    parsed = urlparse(url)
+    # Only probe http/https URLs
+    if parsed.scheme not in ("http", "https"):
+        return {"status": "unknown"}
+
+    try:
+        req = urllib.request.Request(url, method="HEAD", headers={
+            "User-Agent": "kazusa-home-portal-health/1.0",
+        })
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return {"status": "healthy", "http_status": resp.status}
+    except HTTPError as e:
+        # 401/403 means the service is up but requires auth; 3xx is also OK
+        if e.code in (401, 403) or 300 <= e.code < 400:
+            return {"status": "healthy", "http_status": e.code}
+        if 500 <= e.code < 600:
+            return {"status": "unhealthy", "http_status": e.code, "detail": f"HTTP {e.code}"}
+        return {"status": "unknown", "http_status": e.code}
+    except URLError as e:
+        return {"status": "unhealthy", "detail": str(e.reason)}
+    except Exception as e:
+        return {"status": "unhealthy", "detail": str(e)}
+
+
+def get_service_health(url: str) -> dict:
+    return _health_cache.get(url)
+
+
 # ── Rate limiter ───────────────────────────────────────
 
 limiter = auth_limiter
@@ -167,6 +247,34 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 # Mount auth router
 app.include_router(auth_router)
 
+# ── Health check ─────────────────────────────────────────
+
+@app.get("/health")
+def health_check(request: Request):
+    """Public health endpoint for Docker / load balancer checks."""
+    status: dict = {"status": "ok", "checks": {}}
+
+    # DB check
+    try:
+        with db_cursor() as cur:
+            cur.execute("SELECT 1 AS alive")
+            status["checks"]["database"] = {"status": "ok"}
+    except Exception as e:
+        status["status"] = "degraded"
+        status["checks"]["database"] = {"status": "error", "detail": str(e)}
+
+    # Docker API check
+    try:
+        client = docker.from_env()
+        client.ping()
+        status["checks"]["docker"] = {"status": "ok"}
+    except Exception as e:
+        status["status"] = "degraded"
+        status["checks"]["docker"] = {"status": "error", "detail": str(e)}
+
+    code = 200 if status["status"] == "ok" else 503
+    return JSONResponse(status, status_code=code)
+
 # ── Lifecycle ──────────────────────────────────────────
 
 @app.on_event("startup")
@@ -198,6 +306,7 @@ def list_services(request: Request):
             d["access"] = "allowed"
         else:
             d["access"] = "denied"
+        d["health"] = get_service_health(d["url"])
         result.append(d)
     return JSONResponse(content=result, headers={"Cache-Control": "private, no-store"})
 
@@ -232,6 +341,11 @@ def admin_page(request: Request):
 @app.get("/account/tokens")
 def tokens_page(request: Request):
     return FileResponse(os.path.join(STATIC_DIR, "tokens.html"))
+
+
+@app.get("/account/sessions")
+def sessions_page(request: Request):
+    return FileResponse(os.path.join(STATIC_DIR, "sessions.html"))
 
 
 @app.get("/common.css")

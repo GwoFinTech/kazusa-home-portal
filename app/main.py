@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
 from .auth import router as auth_router, _get_current_user, _check_acl, _csrf_token, limiter as auth_limiter
-from .db import init_pool, close_pool, db_cursor
+from .db import init_pool, close_pool, db_cursor, run_migrations
 from . import config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -279,10 +279,11 @@ def health_check(request: Request):
 
 @app.on_event("startup")
 def on_startup():
+    run_migrations()
     init_pool()
     # Warm up service cache
     _svc_cache._refresh()
-    logger.info("Service cache warmed, pool initialized")
+    logger.info("Migrations applied, service cache warmed, pool initialized")
 
 
 @app.on_event("shutdown")

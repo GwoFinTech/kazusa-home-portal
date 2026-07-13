@@ -70,10 +70,13 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="/common.js"></script>
+  <script src="/common.js?v=lucide-v1"></script>
   <script>
   const listEl = document.getElementById('session-list');
   const msgEl = document.getElementById('msg');
+  // Handle the one reload where a pre-Lucide cached common.js may still be served.
+  const sessionIcon = window.icon || ((name) => `<i data-lucide="${name}" aria-hidden="true"></i>`);
+  const refreshSessionIcons = window.refreshIcons || (() => window.lucide?.createIcons());
 
   function showMsg(text, ok) {
     msgEl.textContent = text;
@@ -87,8 +90,8 @@
 
   function deviceIcon(ua) {
     const u = (ua || '').toLowerCase();
-    if (u.includes('iphone') || u.includes('ipad') || u.includes('android')) return icon('smartphone');
-    return icon('laptop');
+    if (u.includes('iphone') || u.includes('ipad') || u.includes('android')) return sessionIcon('smartphone');
+    return sessionIcon('laptop');
   }
 
   function deviceName(ua) {
@@ -123,14 +126,14 @@
       const r = await apiFetch('/api/me/sessions');
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
-        listEl.innerHTML = `<div class="empty"><div class="icon">${icon('triangle-alert')}</div>${esc(data.error || '加载失败')}</div>`;
-        refreshIcons();
+        listEl.innerHTML = `<div class="empty"><div class="icon">${sessionIcon('triangle-alert')}</div>${esc(data.error || '加载失败')}</div>`;
+        refreshSessionIcons();
         return;
       }
       const sessions = await r.json();
       if (!sessions.length) {
-        listEl.innerHTML = `<div class="empty"><div class="icon">${icon('monitor')}</div>没有活跃会话</div>`;
-        refreshIcons();
+        listEl.innerHTML = `<div class="empty"><div class="icon">${sessionIcon('monitor')}</div>没有活跃会话</div>`;
+        refreshSessionIcons();
         return;
       }
       listEl.innerHTML = sessions.map(s => `
@@ -151,10 +154,10 @@
           ${s.is_current ? '' : `<button class="btn btn-danger-outline btn-sm" onclick="revoke('${esc(s.id)}')">退出</button>`}
         </div>
       `).join('');
-      refreshIcons();
+      refreshSessionIcons();
     } catch (e) {
-      listEl.innerHTML = `<div class="empty"><div class="icon">${icon('triangle-alert')}</div>加载失败：${esc(e.message)}</div>`;
-      refreshIcons();
+      listEl.innerHTML = `<div class="empty"><div class="icon">${sessionIcon('triangle-alert')}</div>加载失败：${esc(e.message)}</div>`;
+      refreshSessionIcons();
     }
   }
 

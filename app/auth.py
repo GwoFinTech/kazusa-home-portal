@@ -96,9 +96,15 @@ def _error_page(title: str, icon: str, message: str, action_url: str, action_tex
 
 
 def _make_session_token(user_id: int, email: str) -> str:
-    """Create a signed session token and store its hash in home_sessions."""
+    """Create a signed session token and store its hash in home_sessions.
+
+    Token format (new): user_id.email.timestamp.nonce.signature
+    The nonce ensures each login produces a unique DB row, avoiding
+    duplicate-key collisions when a user logs in multiple times per second.
+    """
     ts = str(int(time.time()))
-    payload = f"{user_id}.{email}.{ts}"
+    nonce = secrets.token_urlsafe(8)
+    payload = f"{user_id}.{email}.{ts}.{nonce}"
     sig = _sign(payload)
     token = f"{payload}.{sig}"
 
@@ -127,24 +133,52 @@ def _make_session_token(user_id: int, email: str) -> str:
 
 def _verify_session_token(token: str) -> Optional[dict]:
     """Verify and decode session token. Returns user info or None.
-    
+
+    Supports both legacy format (user_id.email.timestamp.signature)
+    and new format (user_id.email.timestamp.nonce.signature).
+
     Checks:
     1. HMAC signature
     2. Token expiry (client-side)
     3. Token hash exists in home_sessions (server-side revocation)
     """
-    # Token format: user_id.email.timestamp.signature
-    # Email may contain dots, so split from the right
     try:
-        rest, sig = token.rsplit(".", 1)
-        rest, ts_str = rest.rsplit(".", 1)
-        user_id_str, email = rest.split(".", 1)
+        body, sig = token.rsplit(".", 1)
+        user_id_str, rest = body.split(".", 1)
     except ValueError:
         return None
-    payload = f"{user_id_str}.{email}.{ts_str}"
-    if not hmac.compare_digest(_sign(payload), sig):
+
+    # Parse timestamp and optional nonce from the right.
+    # Legacy: email.timestamp
+    # New:    email.timestamp.nonce
+    # Email may contain dots, so we cannot simply split all parts.
+    # We use the heuristic that legacy timestamps are all digits; nonce is
+    # token_urlsafe and is therefore almost never all digits.
+    parts = rest.rsplit(".", 2)
+    if len(parts) == 2:
+        email, ts_str = parts
+        nonce = None
+    elif len(parts) >= 3:
+        # Last part is either legacy timestamp (all digits) or nonce
+        if parts[-1].isdigit():
+            # Legacy format: everything before the last numeric part is email
+            email = ".".join(parts[:-1])
+            ts_str = parts[-1]
+            nonce = None
+        else:
+            # New format: nonce is last, timestamp is second-to-last
+            ts_str = parts[-2]
+            email = ".".join(parts[:-2])
+            nonce = parts[-1]
+    else:
         return None
-    ts = int(ts_str)
+
+    if not hmac.compare_digest(_sign(body), sig):
+        return None
+    try:
+        ts = int(ts_str)
+    except ValueError:
+        return None
     if time.time() - ts > config.MAX_AGE:
         return None
     try:

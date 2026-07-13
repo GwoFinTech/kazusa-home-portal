@@ -84,8 +84,8 @@
       list-style: none; user-select: none;
     }
     .help-section summary::-webkit-details-marker { display: none; }
-    .help-section summary::before { content: '▸'; font-size: 12px; color: var(--text-muted); transition: transform .15s; }
-    .help-section[open] summary::before { transform: rotate(90deg); }
+    .help-chevron { width: 16px; height: 16px; color: var(--text-muted); transition: transform .15s; }
+    .help-section[open] .help-chevron { transform: rotate(90deg); }
     .help-section summary:hover { background: var(--hover-bg); }
     .help-body {
       padding: 16px; background: var(--card-bg); border: 1px solid var(--border);
@@ -126,7 +126,7 @@
     </div>
 
     <details class="help-section" id="help-section">
-      <summary><i data-lucide="book-open" aria-hidden="true"></i> API 使用说明</summary>
+      <summary><i data-lucide="chevron-right" class="help-chevron" aria-hidden="true"></i><i data-lucide="book-open" aria-hidden="true"></i> API 使用说明</summary>
       <div class="help-body">
         <p>创建的 Token 可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程序化访问所有经过 Traefik <code>kazusa-auth@docker</code> 认证的 <code>*.kazusa.feng.moe</code> 服务。</p>
 

@@ -35,6 +35,17 @@
     #denied { text-align: center; padding: 80px 24px; color: var(--text-muted); }
     .audit-time { color: var(--text-subtle); font-size: 11px; white-space: nowrap; }
     .audit-action { font-weight: 500; }
+    .env-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .env-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card-bg); }
+    .env-card-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .env-card-header h3 { font-size: 14px; font-weight: 600; }
+    .env-meta { color: var(--text-muted); font-size: 11px; }
+    .env-table { min-width: 0; table-layout: fixed; }
+    .env-table td:first-child { width: 46%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-muted); word-break: break-word; }
+    .env-table td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-word; }
+    .env-empty { padding: 20px 14px; color: var(--text-muted); font-size: 13px; }
+    .env-detail { margin-top: 16px; }
+    .env-detail pre { margin: 0; padding: 12px; overflow: auto; background: var(--hover-bg); color: var(--text-muted); font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
     @media (max-width: 480px) {
       body { padding: 16px; }
       .tab { padding: 10px 12px; font-size: 12px; }
@@ -55,6 +66,7 @@
       <button class="tab" data-tab="user-acl">User Access</button>
       <button class="tab" data-tab="announcements">公告</button>
       <button class="tab" data-tab="audit">审计日志</button>
+      <button class="tab" data-tab="environment">系统环境</button>
     </div>
 
     <!-- Role ACL -->
@@ -122,6 +134,12 @@
       </table></div>
     </div>
 
+    <!-- System environment -->
+    <div class="section" id="sec-environment">
+      <h2>系统环境 <span class="hint">仅显示运行时非敏感配置；Token、Secret、Password 等变量由服务端直接过滤</span></h2>
+      <div id="environment-content"><p class="env-empty">加载中…</p></div>
+    </div>
+
     <!-- Audit Log -->
     <div class="section" id="sec-audit">
       <h2>审计日志 <span class="hint">记录所有管理操作</span></h2>
@@ -151,7 +169,7 @@ tabs.forEach(tab => {
     sections.forEach(s => s.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('sec-' + tab.dataset.tab).classList.add('active');
-    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl, 'announcements': loadAnnouncements, 'audit': loadAudit };
+    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl, 'announcements': loadAnnouncements, 'audit': loadAudit, 'environment': loadEnvironment };
     const fn = loaders[tab.dataset.tab];
     if (fn) fn();
   });
@@ -356,6 +374,42 @@ async function toggleAnnouncement(id, active) {
 async function delAnnouncement(id) {
   await apiFetch(`/api/admin/announcements/${id}`, {method:'DELETE'});
   showMsg('公告已删除'); loadAnnouncements();
+}
+
+// ── System environment ──
+function envTable(items) {
+  if (!items || !items.length) return '<p class="env-empty">没有可显示的非敏感变量</p>';
+  return `<div class="table-wrap"><table class="env-table"><tbody>${items.map(item => `<tr><td>${esc(item.key)}</td><td>${esc(item.value) || '—'}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function envCard(title, items, hiddenCount, meta='') {
+  const hidden = hiddenCount ? ` · 已隐藏 ${hiddenCount} 项敏感变量` : '';
+  return `<div class="env-card"><div class="env-card-header"><h3>${esc(title)}</h3><span class="env-meta">${esc(meta)}${esc(hidden)}</span></div>${envTable(items)}</div>`;
+}
+async function loadEnvironment() {
+  const r = await apiFetch('/api/admin/system-environment');
+  if (!r.ok) { showMsg('系统环境读取失败', false); return; }
+  const data = await r.json();
+  const portal = data.portal || {};
+  const tsummt = data.tsummt || {};
+  let html = '<div class="env-grid">';
+  html += envCard('kazusa-home-portal', portal.environment, portal.hidden_count, '当前容器');
+  if (tsummt.available) {
+    const c = tsummt.container || {};
+    html += envCard('tsummt', tsummt.environment, tsummt.hidden_count, `${c.status || 'unknown'} · ${c.image || c.name || ''}`);
+  } else {
+    html += '<div class="env-card"><div class="env-card-header"><h3>tsummt</h3></div><p class="env-empty">暂时无法读取 tsummt 运行时配置</p></div>';
+  }
+  html += '</div>';
+  if (tsummt.available) {
+    const c = tsummt.container || {};
+    const mounts = tsummt.mounts || [];
+    html += `<div class="env-detail"><h2>tsummt 运行信息</h2><div class="table-wrap"><table><tbody>
+      <tr><td>容器</td><td>${esc(c.name)}</td></tr><tr><td>镜像</td><td><code>${esc(c.image)}</code></td></tr>
+      <tr><td>状态</td><td>${esc(c.status)} · 重启 ${esc(String(c.restart_count ?? 0))} 次</td></tr>
+      <tr><td>挂载</td><td>${mounts.length ? mounts.map(m => `<code>${esc(m.source)} → ${esc(m.destination)}</code>`).join('<br>') : '—'}</td></tr>
+    </tbody></table></div></div>`;
+  }
+  document.getElementById('environment-content').innerHTML = html;
 }
 
 // ── Audit Log ──

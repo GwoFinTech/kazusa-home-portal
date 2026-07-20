@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
-from .auth import router as auth_router, _get_current_user, _check_acl, _csrf_token, limiter as auth_limiter
+from .auth import router as auth_router, _get_current_user, _check_acl, _csrf_token, _require_admin, limiter as auth_limiter
 from .db import init_pool, close_pool, db_cursor, run_migrations
 from . import config
 
@@ -320,6 +320,73 @@ def api_me(request: Request):
     session_token = request.cookies.get(config.COOKIE, "")
     csrf = _csrf_token(session_token) if session_token else ""
     return JSONResponse({"authenticated": True, "csrf": csrf, **user}, headers={"Cache-Control": "no-cache"})
+
+
+# ── Admin system environment ─────────────────────────────
+
+_SENSITIVE_ENV_RE = re.compile(
+    r"(?:TOKEN|SECRET|PASSWORD|PASSWD|PRIVATE|CREDENTIAL|API[_-]?KEY|ACCESS[_-]?KEY|COOKIE)",
+    re.IGNORECASE,
+)
+
+
+def _safe_env_items(values: list[str] | dict[str, str]) -> tuple[list[dict[str, str]], int]:
+    """Return non-secret environment entries; never send secret values to clients."""
+    if isinstance(values, dict):
+        pairs = values.items()
+    else:
+        pairs = (item.split("=", 1) for item in values if "=" in item)
+
+    safe: list[dict[str, str]] = []
+    hidden = 0
+    for key, value in sorted(pairs, key=lambda item: item[0].upper()):
+        if _SENSITIVE_ENV_RE.search(key):
+            hidden += 1
+            continue
+        safe.append({"key": key, "value": value})
+    return safe, hidden
+
+
+def _tsummt_runtime_config() -> dict:
+    """Read tsummt's runtime metadata through the existing read-only Docker socket."""
+    try:
+        client = docker.from_env()
+        container = client.containers.get("tsummt")
+        attrs = container.attrs
+        env, hidden = _safe_env_items(attrs.get("Config", {}).get("Env", []))
+        mounts = [
+            {"type": mount.get("Type", ""), "source": mount.get("Source", ""), "destination": mount.get("Destination", "")}
+            for mount in attrs.get("Mounts", [])
+        ]
+        return {
+            "available": True,
+            "container": {
+                "name": container.name,
+                "image": attrs.get("Config", {}).get("Image", ""),
+                "status": attrs.get("State", {}).get("Status", "unknown"),
+                "started_at": attrs.get("State", {}).get("StartedAt", ""),
+                "restart_count": attrs.get("RestartCount", 0),
+            },
+            "environment": env,
+            "hidden_count": hidden,
+            "mounts": mounts,
+        }
+    except Exception as exc:
+        logger.warning("Unable to inspect tsummt runtime config: %s", exc)
+        return {"available": False, "error": "tsummt_runtime_unavailable"}
+
+
+@app.get("/api/admin/system-environment")
+def admin_system_environment(request: Request):
+    """Admin-only diagnostic view. Secret-like variables are omitted server-side."""
+    if not _require_admin(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    portal_env, portal_hidden = _safe_env_items(dict(os.environ))
+    return JSONResponse({
+        "portal": {"environment": portal_env, "hidden_count": portal_hidden},
+        "tsummt": _tsummt_runtime_config(),
+        "policy": {"hidden": "token、secret、password、private key 等敏感变量不会返回"},
+    }, headers={"Cache-Control": "private, no-store"})
 
 
 # ── Static pages ─────────────────────────────────────────

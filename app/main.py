@@ -295,13 +295,13 @@ def on_shutdown():
 @limiter.limit("60/minute")
 def list_services(request: Request):
     user = _get_current_user(request)
+    if not user:
+        return JSONResponse(content=[], headers={"Cache-Control": "private, no-store"})
     services = discover_services()
     result = []
     for s in services:
         d = asdict(s)
-        if not user:
-            d["access"] = "unauthenticated"
-        elif not s.host:
+        if not s.host:
             d["access"] = "allowed"
         elif _check_acl(user["email"], s.host, user.get("role", "user")):
             d["access"] = "allowed"

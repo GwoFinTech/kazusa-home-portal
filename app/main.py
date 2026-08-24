@@ -300,13 +300,10 @@ def list_services(request: Request):
     services = discover_services()
     result = []
     for s in services:
+        if s.host and not _check_acl(user["email"], s.host, user.get("role", "user")):
+            continue
         d = asdict(s)
-        if not s.host:
-            d["access"] = "allowed"
-        elif _check_acl(user["email"], s.host, user.get("role", "user")):
-            d["access"] = "allowed"
-        else:
-            d["access"] = "denied"
+        d["access"] = "allowed"
         d["health"] = get_service_health(d["url"])
         result.append(d)
     return JSONResponse(content=result, headers={"Cache-Control": "private, no-store"})

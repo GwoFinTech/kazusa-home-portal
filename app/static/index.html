@@ -70,9 +70,7 @@
     .empty { text-align: center; color: var(--text-subtle); font-size: 14px; padding: 64px 24px; }
     footer { margin-top: auto; padding: 24px; font-size: 11px; color: var(--text-subtle); }
 
-    .card.disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
     .card .badge { position: absolute; top: 8px; right: 8px; font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; font-weight: 500; }
-    .badge-role { background: var(--warning); color: #fff; }
     .badge-health-healthy { background: var(--success); color: #fff; }
     .badge-health-unhealthy { background: var(--danger); color: #fff; }
     .badge-health-unknown { background: var(--text-subtle); color: #fff; }
@@ -260,19 +258,14 @@ async function loadServices() {
     subtitle.textContent = `${services.length} 个服务`;
     if (!services.length) { grid.innerHTML = '<div class="empty">暂无服务</div>'; return; }
     grid.innerHTML = services.map(s => {
-      const canAccess = s.access === 'allowed';
-      const isDenied = s.access === 'denied';
-      const disabled = !canAccess && s.url;
       let badge = '';
-      if (isDenied) {
-        badge = '<span class="badge badge-role">权限不足</span>';
-      } else if (s.health && s.health.status === 'unhealthy') {
+      if (s.health && s.health.status === 'unhealthy') {
         badge = '<span class="badge badge-health-unhealthy" title="' + esc(s.health.detail || '') + '">访问异常</span>';
       } else if (s.health && s.health.status === 'unknown') {
         badge = '<span class="badge badge-health-unknown">未检测</span>';
       }
       return `
-        <a class="card ${disabled ? 'disabled' : ''}" href="${canAccess ? esc(s.url) : '#'}" target="_blank" rel="noopener"
+        <a class="card" href="${esc(s.url)}" target="_blank" rel="noopener"
            ${!s.url ? 'style="pointer-events:none;opacity:.5"' : ''}>
           ${badge}
           <div class="icon">${esc(s.icon)}</div>

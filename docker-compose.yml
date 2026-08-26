@@ -43,7 +43,7 @@ services:
       - "traefik.http.services.home.loadbalancer.server.port=8000"
       # ── ForwardAuth middleware (referenced by other services as kazusa-auth@docker) ──
       - "traefik.http.middlewares.kazusa-auth.forwardauth.address=http://kazusa-home-portal:8000/auth/verify"
-      - "traefik.http.middlewares.kazusa-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Email,X-User-Name,X-User-Role"
+      - "traefik.http.middlewares.kazusa-auth.forwardauth.authResponseHeaders=X-User-Id,X-User-Email,X-User-Name,X-User-Role,X-Auth-Timestamp,X-Auth-Nonce,X-Auth-Signature"
       - "traefik.http.middlewares.kazusa-auth.forwardauth.trustForwardHeader=true"
 
 networks:

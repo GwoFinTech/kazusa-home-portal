@@ -41,9 +41,9 @@
   |--------|------|
   | `X-Auth-Timestamp` | Unix 秒（校验方要求 60s 新鲜窗口） |
   | `X-Auth-Nonce` | 随机串（每个响应签名唯一） |
-  | `X-Auth-Signature` | `HMAC-SHA256(VERIFY_SECRET, "v1:{ts}:{nonce}:{role}:{email}")` 的 hex |
+  | `X-Auth-Signature` | `HMAC-SHA256(VERIFY_SECRET, "v1:{ts}:{nonce}")` 的 hex |
 
-- **安全属性** — 签名绑定 `role` + `email`（与 `X-User-Role`/`X-User-Email` 实际响应值一致），伪造 bare-header 应答无法通过校验；密钥只存于环境变量，不出现在日志
+- **安全属性** — 签名证明响应（及其携带的 `X-User-*` 身份头）确实来自 kazusa；身份头**不参与**签名 payload（由 Traefik forwardAuth 注入 + `authResponseHeaders` 覆盖语义保证不可伪造）。校验方应配置 Traefik 转发签名三头并做本地验签，无需回查本接口；密钥只存于环境变量，不出现在日志
 - **兼容性** — 未配置 `VERIFY_SECRET` 时响应完全不变，不影响现有 forwardAuth 链路
 
 ## 其他

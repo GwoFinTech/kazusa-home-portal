@@ -19,6 +19,7 @@ services:
       - PORTAL_URL=${PORTAL_URL}
       - PORTAL_HOSTS=${PORTAL_HOSTS}
       - MOCK_AUTH_SECRET=${MOCK_AUTH_SECRET:-}
+      - VERIFY_SECRET=${VERIFY_SECRET:-}
     ports:
       - "127.0.0.1:8001:8000"
     extra_hosts:

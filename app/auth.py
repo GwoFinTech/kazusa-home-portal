@@ -1104,11 +1104,27 @@ async def auth_verify(request: Request, response: Response):
         ), status_code=403)
 
     # Allow — pass user info to upstream
+    role = user.get("role") or "user"
     response.status_code = 200
     response.headers["X-User-Id"] = str(user["id"])
     response.headers["X-User-Email"] = user["email"]
     response.headers["X-User-Name"] = quote(user.get("name") or "")
-    response.headers["X-User-Role"] = user.get("role") or "user"
+    response.headers["X-User-Role"] = role
+
+    # Optional HMAC signature (dsh privileged-auth-http verifySecret protocol).
+    # Payload: "v1:<unix-ts>:<nonce>:<role>:<email>" — the verifier enforces a
+    # 60s freshness window and constant-time comparison. Empty VERIFY_SECRET
+    # keeps the plain-header mode unchanged.
+    if config.VERIFY_SECRET:
+        ts = str(int(time.time()))
+        nonce = secrets.token_hex(8)
+        payload = f"v1:{ts}:{nonce}:{role}:{user['email']}"
+        signature = hmac.new(
+            config.VERIFY_SECRET.encode(), payload.encode(), hashlib.sha256
+        ).hexdigest()
+        response.headers["X-Auth-Timestamp"] = ts
+        response.headers["X-Auth-Nonce"] = nonce
+        response.headers["X-Auth-Signature"] = signature
     return response
 
 

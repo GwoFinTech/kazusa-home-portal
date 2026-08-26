@@ -17,6 +17,11 @@ MAX_AGE = int(os.getenv("SESSION_MAX_AGE", "86400"))  # 24h
 COOKIE = "hp_session"
 COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "")
 
+# ── Verify signing ──
+# Shared secret for HMAC-signed /auth/verify responses (dsh privileged-auth-http
+# verifySecret protocol). Empty = unsigned plain-header mode (backward compatible).
+VERIFY_SECRET = os.getenv("VERIFY_SECRET", "")
+
 # ── Admin ──
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
 

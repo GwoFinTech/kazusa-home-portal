@@ -23,6 +23,7 @@ Docker-label 驱动的 Web 服务门户，集成 Google OAuth、扫码登录、�
 - **[角色 ACL](docs/acl.md)** — 两层 ACL（角色优先 + 用户兜底），支持 fnmatch 通配符
 - **[安全特性](docs/security.md)** — CSRF、Rate Limiting、Session 服务端撤销、审计日志
 - **[API Token](docs/api-tokens.md)** — 创建个人 Bearer Token，程序化访问所有受保护服务
+- **[Verify 签名](docs/security.md)** — `/auth/verify` 可选 HMAC 签名，防伪造特权应答（dsh 特权授权协议）
 - **[Session 管理](docs/sessions.md)** — 查看/撤销已登录设备
 - **真实健康检查** — 首页服务卡片异步 HTTP 探活，异常标红
 - **自动 Migration** — 启动时自动执行未应用的 SQL migration

@@ -30,6 +30,22 @@
 | 修改角色 | 30/min |
 | 服务列表 | 60/min |
 
+## Verify 签名（可选）
+
+`/auth/verify` 支持对成功响应做 HMAC 签名，供上游特权校验方（如 dsh `privileged-auth-http` 插件的 `verifySecret` 协议）防伪造、防篡改：
+
+- **启用** — 设置环境变量 `VERIFY_SECRET`（非空即启用；留空保持纯 header 模式，向后兼容）
+- **协议** — 成功响应额外携带三个 header：
+
+  | Header | 含义 |
+  |--------|------|
+  | `X-Auth-Timestamp` | Unix 秒（校验方要求 60s 新鲜窗口） |
+  | `X-Auth-Nonce` | 随机串（每个响应签名唯一） |
+  | `X-Auth-Signature` | `HMAC-SHA256(VERIFY_SECRET, "v1:{ts}:{nonce}:{role}:{email}")` 的 hex |
+
+- **安全属性** — 签名绑定 `role` + `email`（与 `X-User-Role`/`X-User-Email` 实际响应值一致），伪造 bare-header 应答无法通过校验；密钥只存于环境变量，不出现在日志
+- **兼容性** — 未配置 `VERIFY_SECRET` 时响应完全不变，不影响现有 forwardAuth 链路
+
 ## 其他
 
 - **OAuth State 签名** — `auth_login` 对 return URL 做 HMAC 签名，`auth_callback` 验证后才使用，防止开放重定向

@@ -115,7 +115,7 @@
 <body>
   <a href="/" class="back"><i data-lucide="arrow-left" aria-hidden="true"></i> back</a>
   <h1>admin</h1>
-  <div id="denied" style="display:none"><p>access denied</p></div>
+  <div id="denied" style="display:none"><p data-i18n="admin.denied">access denied</p></div>
   <div id="panel" style="display:none">
     <div id="msg" class="msg"></div>
 
@@ -140,7 +140,7 @@
       <div class="form-row">
         <input id="racl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="racl-role" placeholder="role (e.g. user)">
-        <button class="btn btn-sm btn-primary" onclick="addRoleAcl()">Add</button>
+        <button class="btn btn-sm btn-primary" onclick="addRoleAcl()" data-i18n="act.add">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.domain">Domain</th><th data-i18n="th.role">Role</th><th data-i18n="th.enabled">Enabled</th><th></th></tr></thead>
@@ -155,7 +155,7 @@
       <div class="form-row">
         <input id="preset-email" placeholder="email (e.g. friend@gmail.com)">
         <input id="preset-role" placeholder="role (e.g. friend)">
-        <button class="btn btn-sm btn-primary" onclick="addPreset()">Add</button>
+        <button class="btn btn-sm btn-primary" onclick="addPreset()" data-i18n="act.add">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.email">Email</th><th data-i18n="th.role">Role</th><th></th></tr></thead>
@@ -180,7 +180,7 @@
       <div class="form-row">
         <input id="acl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="acl-email" placeholder="email (e.g. *@feng.moe)">
-        <button class="btn btn-sm btn-primary" onclick="addAcl()">Add</button>
+        <button class="btn btn-sm btn-primary" onclick="addAcl()" data-i18n="act.add">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.domain">Domain</th><th data-i18n="th.email">Email</th><th data-i18n="th.enabled">Enabled</th><th></th></tr></thead>
@@ -305,7 +305,7 @@ async function loadRoleAcl() {
       <td><code>${esc(r.domain)}</code></td>
       <td><span class="badge badge-${r.role === 'admin' ? 'admin' : r.role === 'user' ? 'user' : 'custom'}">${esc(r.role)}</span></td>
       <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="delRoleAcl(${r.id})">delete</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="delRoleAcl(${r.id})">${t('act.delete')}</button></td>
     </tr>
   `).join('');
   refreshIcons();
@@ -313,9 +313,9 @@ async function loadRoleAcl() {
 async function addRoleAcl() {
   const domain = document.getElementById('racl-domain').value.trim();
   const role = document.getElementById('racl-role').value.trim();
-  if (!domain || !role) { showMsg('domain and role required', false); return; }
+  if (!domain || !role) { showMsg(t('msg.domainRoleRequired'), false); return; }
   const r = await apiFetch('/api/admin/role-acl', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain,role})});
-  if (r.ok) { showMsg('role rule added'); document.getElementById('racl-domain').value=''; document.getElementById('racl-role').value=''; loadRoleAcl(); }
+  if (r.ok) { showMsg(t('msg.roleRuleAdded')); document.getElementById('racl-domain').value=''; document.getElementById('racl-role').value=''; loadRoleAcl(); }
   else { const e = await r.json(); showMsg(e.error || 'failed', false); }
 }
 async function toggleRoleAcl(id, enabled) {
@@ -324,7 +324,7 @@ async function toggleRoleAcl(id, enabled) {
 }
 async function delRoleAcl(id) {
   await apiFetch(`/api/admin/role-acl/${id}`, {method:'DELETE'});
-  showMsg('role rule deleted'); loadRoleAcl();
+  showMsg(t('msg.roleRuleDeleted')); loadRoleAcl();
 }
 
 // ── Role Presets ──
@@ -339,10 +339,10 @@ async function loadPresets() {
       <td>
         <span class="badge ${badgeCls}" id="preset-badge-${p.id}">${esc(p.role)}</span>
         <input class="role-input" id="preset-input-${p.id}" value="${esc(p.role)}" style="display:none" onkeydown="if(event.key==='Enter')savePreset(${p.id})">
-        <button class="btn btn-sm btn-outline" id="preset-edit-btn-${p.id}" onclick="editPreset(${p.id})">edit</button>
-        <button class="btn btn-sm btn-primary" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">save</button>
+        <button class="btn btn-sm btn-outline" id="preset-edit-btn-${p.id}" onclick="editPreset(${p.id})">${t('act.edit')}</button>
+        <button class="btn btn-sm btn-primary" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">${t('act.save')}</button>
       </td>
-      <td><button class="btn btn-sm btn-danger" onclick="delPreset(${p.id},'${esc(p.email)}')">delete</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="delPreset(${p.id},'${esc(p.email)}')">${t('act.delete')}</button></td>
     </tr>`;
   }).join('');
 }
@@ -356,22 +356,22 @@ function editPreset(id) {
 }
 async function savePreset(id) {
   const role = document.getElementById('preset-input-'+id).value.trim();
-  if (!role) { showMsg('role must not be empty', false); return; }
+  if (!role) { showMsg(t('msg.roleRequired'), false); return; }
   await apiFetch(`/api/admin/role-presets/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
-  showMsg('preset updated'); loadPresets();
+  showMsg(t('msg.presetUpdated')); loadPresets();
 }
 async function addPreset() {
   const email = document.getElementById('preset-email').value.trim();
   const role = document.getElementById('preset-role').value.trim();
-  if (!email || !role) { showMsg('email and role required', false); return; }
+  if (!email || !role) { showMsg(t('msg.emailRoleRequired'), false); return; }
   const r = await apiFetch('/api/admin/role-presets', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,role})});
-  if (r.ok) { showMsg('preset added'); document.getElementById('preset-email').value=''; document.getElementById('preset-role').value=''; loadPresets(); }
-  else { const e = await r.json(); showMsg(e.error || 'failed', false); }
+  if (r.ok) { showMsg(t('msg.presetAdded')); document.getElementById('preset-email').value=''; document.getElementById('preset-role').value=''; loadPresets(); }
+  else { const e = await r.json(); showMsg(e.error || t('msg.failed'), false); }
 }
 async function delPreset(id, email) {
-  if (!confirm(`Delete preset for ${email}?`)) return;
+  if (!confirm(t('confirm.deletePreset', { email }))) return;
   await apiFetch(`/api/admin/role-presets/${id}`, {method:'DELETE'});
-  showMsg('preset deleted'); loadPresets();
+  showMsg(t('msg.presetDeleted')); loadPresets();
 }
 
 // ── Users ──
@@ -387,11 +387,11 @@ async function loadUsers() {
       <td>
         <span class="badge ${badgeCls}" id="role-badge-${u.id}">${esc(u.role)}</span>
         <input class="role-input" id="role-input-${u.id}" value="${esc(u.role)}" style="display:none" onkeydown="if(event.key==='Enter')saveRole(${u.id})">
-        <button class="btn btn-sm btn-outline" id="role-edit-btn-${u.id}" onclick="editRole(${u.id})">edit</button>
-        <button class="btn btn-sm btn-primary" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">save</button>
+        <button class="btn btn-sm btn-outline" id="role-edit-btn-${u.id}" onclick="editRole(${u.id})">${t('act.edit')}</button>
+        <button class="btn btn-sm btn-primary" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">${t('act.save')}</button>
       </td>
       <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="delUser(${u.id},'${esc(u.email)}')">delete</button></td>
+      <td><button class="btn btn-sm btn-danger" onclick="delUser(${u.id},'${esc(u.email)}')">${t('act.delete')}</button></td>
     </tr>`;
   }).join('');
 }
@@ -405,14 +405,14 @@ function editRole(id) {
 }
 async function saveRole(id) {
   const role = document.getElementById('role-input-'+id).value.trim();
-  if (!role) { showMsg('role must not be empty', false); return; }
+  if (!role) { showMsg(t('msg.roleRequired'), false); return; }
   await apiFetch(`/api/admin/users/${id}/role`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({role})});
-  showMsg('role updated'); loadUsers();
+  showMsg(t('msg.roleUpdated')); loadUsers();
 }
 async function delUser(id, email) {
-  if (!confirm(`Delete user ${email}?`)) return;
+  if (!confirm(t('confirm.deleteUser', { email }))) return;
   await apiFetch(`/api/admin/users/${id}`, {method:'DELETE'});
-  showMsg('user deleted'); loadUsers();
+  showMsg(t('msg.userDeleted')); loadUsers();
 }
 
 // ── Per-user ACL ──
@@ -424,17 +424,17 @@ async function loadAcl() {
     <td>${esc(r.domain)}</td>
     <td>${esc(r.email)}</td>
     <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
-    <td><button class="btn btn-sm btn-danger" onclick="delAcl(${r.id})">delete</button></td>
+    <td><button class="btn btn-sm btn-danger" onclick="delAcl(${r.id})">${t('act.delete')}</button></td>
   </tr>`).join('');
   refreshIcons();
 }
 async function addAcl() {
   const domain = document.getElementById('acl-domain').value.trim();
   const email = document.getElementById('acl-email').value.trim();
-  if (!domain || !email) { showMsg('domain and email required', false); return; }
+  if (!domain || !email) { showMsg(t('msg.domainEmailRequired'), false); return; }
   const r = await apiFetch('/api/admin/acl', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({domain,email})});
-  if (r.ok) { showMsg('rule added'); document.getElementById('acl-domain').value=''; document.getElementById('acl-email').value=''; loadAcl(); }
-  else showMsg('failed', false);
+  if (r.ok) { showMsg(t('msg.ruleAdded')); document.getElementById('acl-domain').value=''; document.getElementById('acl-email').value=''; loadAcl(); }
+  else showMsg(t('msg.failed'), false);
 }
 async function toggleAcl(id, enabled) {
   await apiFetch(`/api/admin/acl/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
@@ -442,7 +442,7 @@ async function toggleAcl(id, enabled) {
 }
 async function delAcl(id) {
   await apiFetch(`/api/admin/acl/${id}`, {method:'DELETE'});
-  showMsg('rule deleted'); loadAcl();
+  showMsg(t('msg.ruleDeleted')); loadAcl();
 }
 
 // ── Announcements ──
@@ -456,17 +456,17 @@ async function loadAnnouncements() {
     <td><span class="badge badge-${a.level === 'error' ? 'admin' : a.level === 'warn' ? 'custom' : 'user'}">${levelLabel[a.level] || a.level}</span></td>
     <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
     <td class="audit-time">${new Date(a.created_at).toLocaleString()}</td>
-    <td><button class="btn btn-sm btn-danger" onclick="delAnnouncement(${a.id})">delete</button></td>
+    <td><button class="btn btn-sm btn-danger" onclick="delAnnouncement(${a.id})">${t('act.delete')}</button></td>
   </tr>`).join('');
   refreshIcons();
 }
 async function addAnnouncement() {
   const message = document.getElementById('ann-message').value.trim();
   const level = document.getElementById('ann-level').value;
-  if (!message) { showMsg('message required', false); return; }
+  if (!message) { showMsg(t('msg.messageRequired'), false); return; }
   const r = await apiFetch('/api/admin/announcements', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message, level})});
   if (r.ok) { showMsg(t('ann.published')); document.getElementById('ann-message').value=''; loadAnnouncements(); }
-  else showMsg('failed', false);
+  else showMsg(t('msg.failed'), false);
 }
 async function toggleAnnouncement(id, active) {
   await apiFetch(`/api/admin/announcements/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({active})});
@@ -513,6 +513,12 @@ async function loadEnvironment() {
   document.getElementById('environment-content').innerHTML = html;
 }
 
+function auditActionLabel(a) {
+  const k = 'audit.action.' + a;
+  const v = t(k);
+  return v === k ? a : v;
+}
+
 // ── Audit Log ──
 async function loadAudit() {
   const r = await apiFetch('/api/admin/audit');
@@ -522,7 +528,7 @@ async function loadAudit() {
   document.getElementById('audit-body').innerHTML = logs.map(l => `<tr>
     <td class="audit-time">${new Date(l.created_at).toLocaleString()}</td>
     <td>${esc(l.actor_email)}</td>
-    <td class="audit-action">${esc(l.action)}</td>
+    <td class="audit-action">${esc(auditActionLabel(l.action))}</td>
     <td>${esc(l.target)}</td>
     <td style="color:var(--text-muted);font-size:12px">${esc(l.details)}</td>
   </tr>`).join('');
@@ -561,7 +567,7 @@ async function loadManualServices() {
     <td>${esc(s.category) || '—'}</td>
     <td>${esc(String(s.order ?? 100))}</td>
     <td class="toggle" onclick="toggleManualService(${s.id},${!s.enabled})">${s.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
-    <td><button class="btn btn-sm btn-danger" onclick="delManualService(${s.id})">delete</button></td>
+    <td><button class="btn btn-sm btn-danger" onclick="delManualService(${s.id})">${t('act.delete')}</button></td>
   </tr>`).join('');
   refreshIcons();
 }

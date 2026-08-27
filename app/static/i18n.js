@@ -611,7 +611,7 @@ function setLocale(lang, silent) {
   localStorage.setItem('lang', lang);
   applyI18n();
   refreshIcons?.();
-  if (!silent) window.dispatchEvent(new CustomEvent('i18n:change', { detail: { lang } }));
+  if (!silent) document.dispatchEvent(new CustomEvent('i18n:change', { detail: { lang } }));
 }
 
 function currentLocale() { return _locale; }

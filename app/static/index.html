@@ -201,27 +201,28 @@
 <!-- QR Show Modal (unauthenticated: display QR for scanning) -->
 <div id="qr-show-overlay" class="qr-overlay" onclick="if(event.target===this)closeShowQR()">
   <div class="qr-modal">
-    <button class="qr-close" onclick="closeShowQR()" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
-    <h2>扫码登录</h2>
-    <p>用已登录的设备扫描此二维码</p>
+    <button class="qr-close" onclick="closeShowQR()" aria-label="close" data-i18n-aria="common.close"><i data-lucide="x" aria-hidden="true"></i></button>
+    <h2 data-i18n="qr.showTitle">扫码登录</h2>
+    <p data-i18n="qr.showDesc">用已登录的设备扫描此二维码</p>
     <div id="qr-show-display"></div>
-    <div id="qr-show-status">正在生成二维码…</div>
+    <div id="qr-show-status" data-i18n="qr.generating">正在生成二维码…</div>
   </div>
 </div>
 
 <!-- QR Scan Modal (authenticated: open camera to scan) -->
 <div id="qr-scan-overlay" class="qr-overlay" onclick="if(event.target===this)closeScanQR()">
   <div class="qr-modal">
-    <button class="qr-close" onclick="closeScanQR()" aria-label="关闭"><i data-lucide="x" aria-hidden="true"></i></button>
-    <h2>扫码授权登录</h2>
-    <p>对准另一台设备上的二维码</p>
+    <button class="qr-close" onclick="closeScanQR()" aria-label="close" data-i18n-aria="common.close"><i data-lucide="x" aria-hidden="true"></i></button>
+    <h2 data-i18n="qr.scanTitle">扫码授权登录</h2>
+    <p data-i18n="qr.scanDesc">对准另一台设备上的二维码</p>
     <video id="scanner-video" autoplay playsinline></video>
     <canvas id="scanner-canvas" style="display:none"></canvas>
-    <div id="scanner-status">正在启动摄像头…</div>
+    <div id="scanner-status" data-i18n="qr.cameraStarting">正在启动摄像头…</div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script src="/i18n.js?v=i18n-v1"></script>
 <script src="/common.js?v=lucide-v1"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
@@ -231,6 +232,8 @@ const userBar = document.getElementById('user-bar');
 const annDiv = document.getElementById('announcements');
 
 let isAuthenticated = false;
+
+document.addEventListener('i18n:change', () => { loadServices(); });
 
 async function loadUser() {
   try {
@@ -253,12 +256,12 @@ async function loadUser() {
     <form action="/auth/login" method="GET">
       <button class="btn btn-outline" type="submit">
         <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        使用 Google 登录
+        ${t('portal.loginGoogle')}
       </button>
     </form>
     <button class="btn btn-outline" onclick="openShowQR()">
       ${icon('scan-line')}
-      扫码登录
+      ${t('portal.loginQR')}
     </button>
   </div>`;
   refreshIcons();
@@ -274,11 +277,11 @@ function renderAccountChip(u) {
       ${icon('chevron-down', '', '')}
     </div>
     <div class="account-menu" id="account-menu">
-      ${u.role === 'admin' ? `<a href="/admin">${icon('shield')} 管理后台</a>` : ''}
-      <a href="/account/tokens">${icon('key-round')} API Tokens</a>
-      <a href="/account/sessions">${icon('monitor-smartphone')} 设备管理</a>
-      <button type="button" onclick="openScanQR()">${icon('scan-line')} 扫码授权</button>
-      <a href="/auth/logout">${icon('log-out')} 退出登录</a>
+      ${u.role === 'admin' ? `<a href="/admin">${icon('shield')} ${t('menu.admin')}</a>` : ''}
+      <a href="/account/tokens">${icon('key-round')} ${t('menu.tokens')}</a>
+      <a href="/account/sessions">${icon('monitor-smartphone')} ${t('menu.devices')}</a>
+      <button type="button" onclick="openScanQR()">${icon('scan-line')} ${t('menu.scan')}</button>
+      <a href="/auth/logout">${icon('log-out')} ${t('menu.logout')}</a>
     </div>`;
   refreshIcons();
 
@@ -303,13 +306,13 @@ function statusClass(s) {
 }
 
 function groupLabel(c) {
-  if (!c || !String(c).trim()) return '默认分组';
+  if (!c || !String(c).trim()) return t('portal.ungrouped');
   return String(c).trim();
 }
 
 function renderServices(services) {
-  subtitle.textContent = `${services.length} 个服务`;
-  if (!services.length) { grid.innerHTML = '<div class="empty">暂无服务</div>'; return; }
+  subtitle.textContent = t('portal.serviceCount', { n: services.length });
+  if (!services.length) { grid.innerHTML = `<div class="empty">${t('portal.noServices')}</div>`; return; }
   // Group by category preserving first-appearance order
   const groups = new Map();
   services.forEach((s) => {
@@ -323,9 +326,9 @@ function renderServices(services) {
     ${items.map(s => {
       let badge = '';
       if (s.health && s.health.status === 'unhealthy') {
-        badge = '<span class="badge badge-health-unhealthy card-badge" title="' + esc(s.health.detail || '') + '">访问异常</span>';
+        badge = '<span class="badge badge-health-unhealthy card-badge" title="' + esc(s.health.detail || '') + '">' + esc(t('portal.badge.unhealthy')) + '</span>';
       } else if (s.health && s.health.status === 'unknown') {
-        badge = '<span class="badge badge-health-unknown card-badge">未检测</span>';
+        badge = '<span class="badge badge-health-unknown card-badge">' + esc(t('portal.badge.unknown')) + '</span>';
       }
       const delay = Math.min(i++ * 35, 350);
       return `
@@ -343,11 +346,11 @@ function renderServices(services) {
 
 async function loadServices() {
   if (!isAuthenticated) {
-    subtitle.textContent = '请先登录';
+    subtitle.textContent = t('portal.loginRequired');
     grid.innerHTML = `
       <div class="empty">
-        <p style="margin-bottom:16px;color:var(--text-muted);">登录后即可查看应用列表</p>
-        <button class="btn btn-primary" onclick="location.href='/auth/login'">使用 Google 登录</button>
+        <p style="margin-bottom:16px;color:var(--text-muted);">${t('portal.loginToView')}</p>
+        <button class="btn btn-primary" onclick="location.href='/auth/login'">${t('portal.loginGoogle')}</button>
       </div>`;
     return;
   }
@@ -355,7 +358,7 @@ async function loadServices() {
     const res = await fetch('/api/services');
     if (!res.ok) throw new Error();
     renderServices(await res.json());
-  } catch { subtitle.textContent = '加载失败'; }
+  } catch { subtitle.textContent = t('portal.loadFailed'); }
 }
 
 async function loadAnnouncements() {
@@ -368,7 +371,7 @@ async function loadAnnouncements() {
     annDiv.innerHTML = items.map(a => `
       <div class="announcement ${esc(a.level)}" style="display:flex">
         <span>${esc(a.message)}</span>
-        <button class="dismiss" onclick="dismissAnnouncement(${a.id}, this)" aria-label="关闭公告">${icon('x')}</button>
+        <button class="dismiss" onclick="dismissAnnouncement(${a.id}, this)" aria-label="close">${icon('x')}</button>
       </div>
     `).join('');
     refreshIcons();
@@ -393,7 +396,7 @@ async function openShowQR() {
   const status = document.getElementById('qr-show-status');
   overlay.classList.add('active');
   display.innerHTML = '';
-  status.textContent = '正在生成二维码…';
+  status.textContent = t('qr.generating');
   status.className = '';
 
   try {
@@ -401,14 +404,14 @@ async function openShowQR() {
     if (!r.ok) throw new Error();
     const data = await r.json();
     display.innerHTML = data.svg;
-    status.textContent = '请用已登录的设备扫描此二维码';
+    status.textContent = t('qr.showHint');
 
     let count = 0;
     qrShowTimer = setInterval(async () => {
       count++;
       if (count > 150) {
         clearInterval(qrShowTimer);
-        status.textContent = '二维码已过期，请关闭后重试';
+        status.textContent = t('qr.expired');
         status.className = 'error';
         return;
       }
@@ -417,17 +420,17 @@ async function openShowQR() {
         const s = await sr.json();
         if (s.status === 'confirmed' && s.token) {
           clearInterval(qrShowTimer);
-          status.textContent = '登录成功，正在跳转…';
+          status.textContent = t('qr.success');
           window.location.href = '/auth/qr/token?sid=' + data.sid;
         } else if (s.status === 'expired') {
           clearInterval(qrShowTimer);
-          status.textContent = '二维码已过期，请关闭后重试';
+          status.textContent = t('qr.expired');
           status.className = 'error';
         }
       } catch {}
     }, 2000);
   } catch {
-    status.textContent = '生成二维码失败，请重试';
+    status.textContent = t('qr.createFailed');
     status.className = 'error';
   }
 }
@@ -446,7 +449,7 @@ async function openScanQR() {
   const video = document.getElementById('scanner-video');
   const status = document.getElementById('scanner-status');
   overlay.classList.add('active');
-  status.textContent = '正在启动摄像头…';
+  status.textContent = t('qr.cameraStarting');
   status.className = '';
 
   try {
@@ -455,7 +458,7 @@ async function openScanQR() {
     });
     video.srcObject = scannerStream;
     await video.play();
-    status.textContent = '对准二维码自动识别';
+    status.textContent = t('qr.cameraReady');
 
     const canvas = document.getElementById('scanner-canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -472,13 +475,13 @@ async function openScanQR() {
           const url = code.data;
           // Verify it's a valid QR confirm URL
           if (url.includes('/auth/qr/confirm?sid=') || url.includes('/auth/qr/confirm%3Fsid%3D')) {
-            status.textContent = '识别成功，正在跳转…';
+            status.textContent = t('qr.recognized');
             status.className = 'success';
             closeScanQR();
             window.location.href = url;
             return;
           } else {
-            status.textContent = '非登录二维码，请对准正确的二维码';
+            status.textContent = t('qr.notLoginCode');
             status.className = 'error';
           }
         }
@@ -488,11 +491,11 @@ async function openScanQR() {
     scannerRAF = requestAnimationFrame(tick);
   } catch (err) {
     if (err.name === 'NotAllowedError') {
-      status.textContent = '摄像头权限被拒绝，请在浏览器设置中允许访问';
+      status.textContent = t('qr.cameraDenied');
     } else if (err.name === 'NotFoundError') {
-      status.textContent = '未找到摄像头设备';
+      status.textContent = t('qr.cameraNotFound');
     } else {
-      status.textContent = '无法启动摄像头: ' + err.message;
+      status.textContent = t('qr.cameraError', { msg: err.message });
     }
     status.className = 'error';
   }

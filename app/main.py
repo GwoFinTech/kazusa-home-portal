@@ -431,6 +431,32 @@ def admin_system_environment(request: Request):
     }, headers={"Cache-Control": "private, no-store"})
 
 
+# ── Admin: Service Discovery (read-only view of docker-label services) ──
+
+@app.get("/api/admin/service-discovery")
+def admin_service_discovery(request: Request):
+    """Read-only listing of Docker-label auto-discovered services (pre-ACL merge,
+    exactly what the label scan found). Manual entries are excluded."""
+    if not _require_admin(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    services = [s for s in discover_services() if s.status != "manual"]
+    items = [
+        {
+            "name": s.name,
+            "title": s.title,
+            "description": s.description,
+            "icon": s.icon,
+            "host": s.host,
+            "url": s.url,
+            "category": s.category,
+            "order": s.order,
+            "status": s.status,
+        }
+        for s in sorted(services, key=lambda x: (x.order, x.title))
+    ]
+    return JSONResponse(content=items, headers={"Cache-Control": "private, no-store"})
+
+
 # ── Admin: Manual Services ───────────────────────────────
 # Register Traefik file-provider routes (no Docker labels) so they appear in the
 # portal service list even without a labelled container.

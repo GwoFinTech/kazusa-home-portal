@@ -44,10 +44,99 @@ def _sign(data: str) -> str:
     return hmac.new(config.SECRET.encode(), data.encode(), hashlib.sha256).hexdigest()
 
 
-def _error_page(title: str, icon: str, message: str, action_url: str, action_text: str, status: int) -> str:
+# ── Server-side i18n (Accept-Language negotiation) ────────
+# For server-rendered pages (forwardAuth error pages, QR confirm). The browser
+# SPA uses /i18n.js instead. Locale stored per-request; never a cookie.
+
+_SERVER_MESSAGES: dict[str, dict[str, str]] = {
+    "zh-CN": {
+        "error.invalidLink.title": "无效链接", "error.invalidLink.msg": "二维码链接无效或已过期。",
+        "error.qrExpired.title": "二维码已过期", "error.qrExpired.msg": "此二维码已失效，请在另一台设备上重新生成。",
+        "error.qrUsed.title": "登录失败", "error.qrUsed.msg": "二维码已过期或已使用，请重新扫码。",
+        "error.unauthorized.title": "需要登录", "error.unauthorized.msg": "你还未登录，请先登录后再访问此页面。",
+        "error.forbidden.title": "无权访问",
+        "error.forbidden.msg": "你的账号 <strong>{email}</strong> 没有访问此应用的权限。<br>如需开通，请联系管理员。",
+        "action.login": "使用 Google 账号登录", "action.backHome": "返回首页", "action.toPortal": "返回主页",
+        "qr.confirmTitle": "扫码登录确认", "qr.confirmDesc": "另一台设备请求登录你的账号，请确认是否授权",
+        "qr.confirmBtn": "确认授权", "qr.cancelBtn": "取消", "qr.authorizing": "授权中…",
+        "qr.confirmSent": "授权请求已发出", "qr.backPortal": "回到主页 ({sec})",
+        "qr.authFailed": "授权失败", "qr.retry": "重试", "qr.networkError": "网络错误，请重试",
+    },
+    "zh-TW": {
+        "error.invalidLink.title": "無效連結", "error.invalidLink.msg": "QR 碼連結無效或已過期。",
+        "error.qrExpired.title": "QR 碼已過期", "error.qrExpired.msg": "此 QR 碼已失效，請在另一台裝置上重新產生。",
+        "error.qrUsed.title": "登入失敗", "error.qrUsed.msg": "QR 碼已過期或已使用，請重新掃碼。",
+        "error.unauthorized.title": "需要登入", "error.unauthorized.msg": "你還未登入，請先登入後再造訪此頁面。",
+        "error.forbidden.title": "無權存取",
+        "error.forbidden.msg": "你的帳號 <strong>{email}</strong> 沒有存取此應用的權限。<br>如需開通，請聯絡管理員。",
+        "action.login": "使用 Google 帳號登入", "action.backHome": "返回首頁", "action.toPortal": "返回主頁",
+        "qr.confirmTitle": "掃碼登入確認", "qr.confirmDesc": "另一台裝置請求登入你的帳號，請確認是否授權",
+        "qr.confirmBtn": "確認授權", "qr.cancelBtn": "取消", "qr.authorizing": "授權中…",
+        "qr.confirmSent": "授權請求已發出", "qr.backPortal": "回到主頁 ({sec})",
+        "qr.authFailed": "授權失敗", "qr.retry": "重試", "qr.networkError": "網路錯誤，請重試",
+    },
+    "en-US": {
+        "error.invalidLink.title": "Invalid Link", "error.invalidLink.msg": "The QR code link is invalid or expired.",
+        "error.qrExpired.title": "QR Code Expired", "error.qrExpired.msg": "This QR code is no longer valid. Generate a new one on the other device.",
+        "error.qrUsed.title": "Sign-In Failed", "error.qrUsed.msg": "The QR code has expired or was already used. Please scan again.",
+        "error.unauthorized.title": "Sign In Required", "error.unauthorized.msg": "You are not signed in. Please sign in before accessing this page.",
+        "error.forbidden.title": "Access Denied",
+        "error.forbidden.msg": "Your account <strong>{email}</strong> does not have permission to access this app.<br>Contact an administrator to request access.",
+        "action.login": "Sign in with Google", "action.backHome": "Back to Home", "action.toPortal": "Go to Portal",
+        "qr.confirmTitle": "Confirm Scan Sign-In", "qr.confirmDesc": "Another device is requesting to sign in as your account. Confirm to authorize.",
+        "qr.confirmBtn": "Authorize", "qr.cancelBtn": "Cancel", "qr.authorizing": "Authorizing…",
+        "qr.confirmSent": "Authorization sent", "qr.backPortal": "Back to portal ({sec})",
+        "qr.authFailed": "Authorization failed", "qr.retry": "Retry", "qr.networkError": "Network error, please retry",
+    },
+    "ja": {
+        "error.invalidLink.title": "無効なリンク", "error.invalidLink.msg": "QR コードのリンクが無効または期限切れです。",
+        "error.qrExpired.title": "QR コードの有効期限切れ", "error.qrExpired.msg": "この QR コードは無効です。別のデバイスで再生成してください。",
+        "error.qrUsed.title": "ログイン失敗", "error.qrUsed.msg": "QR コードの有効期限が切れているか、既に使用されています。もう一度スキャンしてください。",
+        "error.unauthorized.title": "ログインが必要です", "error.unauthorized.msg": "ログインしていません。先にログインしてからアクセスしてください。",
+        "error.forbidden.title": "アクセス権限なし",
+        "error.forbidden.msg": "アカウント <strong>{email}</strong> にはこのアプリへのアクセス権限がありません。<br>必要な場合は管理者にお問い合わせください。",
+        "action.login": "Google でログイン", "action.backHome": "ホームへ戻る", "action.toPortal": "ポータルへ",
+        "qr.confirmTitle": "QR スキャンログイン確認", "qr.confirmDesc": "別のデバイスがあなたのアカウントへのログインを要求しています。承認してください。",
+        "qr.confirmBtn": "承認", "qr.cancelBtn": "キャンセル", "qr.authorizing": "承認中…",
+        "qr.confirmSent": "承認リクエストを送信しました", "qr.backPortal": "ポータルへ戻る ({sec})",
+        "qr.authFailed": "承認に失敗しました", "qr.retry": "再試行", "qr.networkError": "ネットワークエラー、再試行してください",
+    },
+}
+
+_LANG_ALIASES = {"zh-tw": "zh-TW", "zh-hk": "zh-TW", "zh-hant": "zh-TW", "en": "en-US", "ja": "ja", "jp": "ja"}
+
+
+def _detect_locale(request) -> str:
+    """Accept-Language negotiation; falls back to zh-CN."""
+    header = request.headers.get("accept-language", "") if request else ""
+    for part in header.split(","):
+        tag = part.split(";")[0].strip().lower()
+        if not tag:
+            continue
+        if tag.startswith("zh"):
+            return "zh-CN" if ("cn" in tag or "hans" in tag or tag == "zh") else "zh-TW"
+        for alias, loc in _LANG_ALIASES.items():
+            if tag == alias or (alias == "en" and tag.startswith("en")):
+                return loc
+    return "zh-CN"
+
+
+def st(request, key: str, **params) -> str:
+    """Translate a server-rendered string for the request's locale."""
+    loc = _detect_locale(request)
+    msg = _SERVER_MESSAGES.get(loc, _SERVER_MESSAGES["zh-CN"]).get(key)
+    if msg is None:
+        msg = _SERVER_MESSAGES["zh-CN"].get(key, key)
+    for k, v in params.items():
+        msg = msg.replace("{" + k + "}", str(v))
+    return msg
+
+
+def _error_page(request, title: str, icon: str, message: str, action_url: str, action_text: str, status: int) -> str:
     """Render a styled error page matching portal design."""
+    lang_tag = {"zh-CN": "zh-CN", "zh-TW": "zh-TW", "en-US": "en", "ja": "ja"}[_detect_locale(request)]
     return f"""<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{lang_tag}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -656,17 +745,19 @@ async def qr_confirm_page(request: Request):
     sid = request.query_params.get("sid", "")
     if not sid:
         return HTMLResponse(_error_page(
-            title="无效链接", icon="circle-x",
-            message="二维码链接无效或已过期。",
-            action_url=config.PORTAL_URL, action_text="返回首页", status=400,
+            request,
+            title=st(request, "error.invalidLink.title"), icon="circle-x",
+            message=st(request, "error.invalidLink.msg"),
+            action_url=config.PORTAL_URL, action_text=st(request, "action.backHome"), status=400,
         ), status_code=400)
 
     s = _qr_store.get(sid)
     if not s or s.expires_at < time.time():
         return HTMLResponse(_error_page(
-            title="二维码已过期", icon="clock-3",
-            message="此二维码已失效，请在另一台设备上重新生成。",
-            action_url=config.PORTAL_URL, action_text="返回首页", status=410,
+            request,
+            title=st(request, "error.qrExpired.title"), icon="clock-3",
+            message=st(request, "error.qrExpired.msg"),
+            action_url=config.PORTAL_URL, action_text=st(request, "action.backHome"), status=410,
         ), status_code=410)
 
     user = _get_current_user(request)
@@ -693,7 +784,7 @@ async def qr_confirm_page(request: Request):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0a0a0a">
   <link rel="stylesheet" href="/common.css?v=tokens-v1">
-  <title>扫码确认 — kazusa</title>
+  <title>{st(request, 'qr.confirmTitle')} — kazusa</title>
   <style>
     body {{ min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px; }}
     .confirm-shell {{
@@ -728,8 +819,8 @@ async def qr_confirm_page(request: Request):
 <body>
   <div class="confirm-shell">
   <div class="confirm-card">
-    <h1>扫码登录确认</h1>
-    <p>另一台设备请求登录你的账号，请确认是否授权</p>
+    <h1>{st(request, 'qr.confirmTitle')}</h1>
+    <p>{st(request, 'qr.confirmDesc')}</p>
     <div class="user-info">
       {f'<img src="{html.escape(user.get("picture", ""))}" alt="">' if user.get("picture") else ''}
       <div>
@@ -737,16 +828,17 @@ async def qr_confirm_page(request: Request):
         <div class="email">{html.escape(user.get("email", ""))}</div>
       </div>
     </div>
-    <button class="btn btn-primary" id="confirm-btn">确认授权</button>
-    <button class="btn btn-outline" id="cancel-btn" onclick="window.location.href='{config.PORTAL_URL}'">取消</button>
+    <button class="btn btn-primary" id="confirm-btn">{st(request, 'qr.confirmBtn')}</button>
+    <button class="btn btn-outline" id="cancel-btn" onclick="window.location.href='{config.PORTAL_URL}'">{st(request, 'qr.cancelBtn')}</button>
     <div class="msg" id="msg"></div>
   </div>
   </div>
   <script>
+    const COUNTDOWN_TMPL = '{st(request, 'qr.backPortal')}';
     document.getElementById('confirm-btn').addEventListener('click', async function() {{
       const btn = this;
       btn.disabled = true;
-      btn.textContent = '授权中…';
+      btn.textContent = '{st(request, 'qr.authorizing')}';
       const msg = document.getElementById('msg');
       try {{
         const r = await fetch('/auth/qr/confirm', {{
@@ -758,8 +850,8 @@ async def qr_confirm_page(request: Request):
         if (data.ok) {{
           msg.style.display = 'block';
           msg.className = 'msg msg-ok';
-          msg.textContent = '授权请求已发出';
-          btn.textContent = '回到主页 (3)';
+          msg.textContent = '{st(request, 'qr.confirmSent')}';
+          btn.textContent = '{st(request, 'qr.backPortal').format(sec=3)}';
           btn.disabled = false;
           document.getElementById('cancel-btn').style.display = 'none';
           btn.onclick = function() {{ window.location.href = '{config.PORTAL_URL}'; }};
@@ -770,22 +862,22 @@ async def qr_confirm_page(request: Request):
               clearInterval(timer);
               window.location.href = '{config.PORTAL_URL}';
             }} else {{
-              btn.textContent = '回到主页 (' + sec + ')';
+              btn.textContent = COUNTDOWN_TMPL.replace('{sec}', sec);
             }}
           }}, 1000);
         }} else {{
           msg.style.display = 'block';
           msg.className = 'msg msg-err';
-          msg.textContent = data.error || '授权失败';
+          msg.textContent = data.error || '{st(request, 'qr.authFailed')}';
           btn.disabled = false;
-          btn.textContent = '重试';
+          btn.textContent = '{st(request, 'qr.retry')}';
         }}
       }} catch {{
         msg.style.display = 'block';
         msg.className = 'msg msg-err';
-        msg.textContent = '网络错误，请重试';
+        msg.textContent = '{st(request, 'qr.networkError')}';
         btn.disabled = false;
-        btn.textContent = '重试';
+        btn.textContent = '{st(request, 'qr.retry')}';
       }}
     }});
   </script>
@@ -842,9 +934,10 @@ async def qr_token(request: Request):
     s = _qr_store.get(sid)
     if not s or not s.token:
         return HTMLResponse(_error_page(
-            title="登录失败", icon="circle-x",
-            message="二维码已过期或已使用，请重新扫码。",
-            action_url=config.PORTAL_URL, action_text="返回首页", status=410,
+            request,
+            title=st(request, "error.qrUsed.title"), icon="circle-x",
+            message=st(request, "error.qrUsed.msg"),
+            action_url=config.PORTAL_URL, action_text=st(request, "action.backHome"), status=410,
         ), status_code=410)
 
     # Consume the token
@@ -1095,22 +1188,24 @@ async def auth_verify(request: Request, response: Response):
         original_url = f"{forwarded_proto}://{forwarded_host}{forwarded_uri}"
         login_url = f"{config.PORTAL_URL}/auth/login?return={original_url}"
         return HTMLResponse(_error_page(
-            title="需要登录",
+            request,
+            title=st(request, "error.unauthorized.title"),
             icon="lock-keyhole",
-            message="你还未登录，请先登录后再访问此页面。",
+            message=st(request, "error.unauthorized.msg"),
             action_url=login_url,
-            action_text="使用 Google 账号登录",
+            action_text=st(request, "action.login"),
             status=401,
         ), status_code=401)
 
     # Check ACL
     if not _check_acl(user["email"], forwarded_host, user.get("role", "user")):
         return HTMLResponse(_error_page(
-            title="无权访问",
+            request,
+            title=st(request, "error.forbidden.title"),
             icon="ban",
-            message=f"你的账号 <strong>{html.escape(user['email'])}</strong> 没有访问此应用的权限。<br>如需开通，请联系管理员。",
+            message=st(request, "error.forbidden.msg", email=html.escape(user['email'])),
             action_url=config.PORTAL_URL,
-            action_text="返回主页",
+            action_text=st(request, "action.toPortal"),
             status=403,
         ), status_code=403)
 

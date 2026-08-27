@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0a0a0a">
   <link rel="stylesheet" href="/common.css?v=tokens-v1">
-  <title>API Token 管理 — kazusa</title>
+  <title data-i18n="tokens.title">API Token 管理 — kazusa</title>
   <style>
     body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px; }
     .container { max-width: 720px; width: 100%; }
@@ -127,73 +127,44 @@
   <div class="container">
     <div class="header">
       <div>
-        <h1><i data-lucide="key-round" aria-hidden="true"></i> API Token</h1>
-        <div class="sub">管理你的个人访问令牌，用于程序化访问 *.kazusa.feng.moe 服务</div>
+        <h1><i data-lucide="key-round" aria-hidden="true"></i> <span data-i18n="tok.h1">API Token</span></h1>
+        <div class="sub" data-i18n="tok.sub">管理你的个人访问令牌，用于程序化访问 *.kazusa.feng.moe 服务</div>
       </div>
-      <a class="back" href="/"><i data-lucide="arrow-left" aria-hidden="true"></i> 返回首页</a>
+      <a class="back" href="/"><i data-lucide="arrow-left" aria-hidden="true"></i> <span data-i18n="tok.back">返回首页</span></a>
     </div>
 
     <div class="create-area">
-      <button class="btn btn-primary" onclick="openCreate()"><i data-lucide="plus" aria-hidden="true"></i> 创建新 Token</button>
+      <button class="btn btn-primary" onclick="openCreate()"><i data-lucide="plus" aria-hidden="true"></i> <span data-i18n="tok.createBtn">创建新 Token</span></button>
     </div>
 
     <details class="help-section" id="help-section">
-      <summary><i data-lucide="chevron-right" class="help-chevron" aria-hidden="true"></i><i data-lucide="book-open" aria-hidden="true"></i> API 使用说明</summary>
-      <div class="help-body">
-        <p>创建的 Token 可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程序化访问所有经过 Traefik <code>kazusa-auth@docker</code> 认证的 <code>*.kazusa.feng.moe</code> 服务。</p>
-
-        <p><strong>基本用法</strong></p>
-        <pre><code>curl -H "Authorization: Bearer hp_xxxxxxxxxxxxxxxxxxx" \
-  https://kazusa.feng.moe/api/me</code></pre>
-
-        <p><strong>可用端点示例</strong></p>
-        <ul>
-          <li><code>GET /api/me</code> — 获取当前登录用户信息</li>
-          <li><code>GET /api/services</code> — 列出所有服务及访问权限</li>
-          <li><code>GET /auth/tokens</code> — 管理自己的 Token</li>
-        </ul>
-
-        <p><strong>请求头规范</strong></p>
-        <ul>
-          <li>必须携带 <code>Authorization: Bearer &lt;token&gt;</code></li>
-          <li>不需要额外的 CSRF Token（Bearer 认证不怕 CSRF）</li>
-          <li>与浏览器 Cookie 认证互斥，同时只需要一种</li>
-        </ul>
-
-        <p><strong>安全提示</strong></p>
-        <ul>
-          <li>Token 仅在创建时展示一次，请立即复制并妥善保管</li>
-          <li>如果怀疑泄露，请立即点击「撤销」，所有使用该 Token 的客户端会立即失去访问权限</li>
-          <li>建议为不同场景创建独立 Token，并设置合理的过期时间</li>
-        </ul>
-
-        <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> 小提示：在脚本或 CI 中使用时，建议将 Token 存入环境变量，避免硬编码。</div>
-      </div>
+      <summary><i data-lucide="chevron-right" class="help-chevron" aria-hidden="true"></i><i data-lucide="book-open" aria-hidden="true"></i> <span data-i18n="tok.helpTitle">API 使用说明</span></summary>
+      <div class="help-body" id="help-body"></div>
     </details>
 
     <div id="token-list">
-      <div class="empty"><div class="icon"><i data-lucide="key-round" aria-hidden="true"></i></div>加载中…</div>
+      <div class="empty"><div class="icon"><i data-lucide="key-round" aria-hidden="true"></i></div><span data-i18n="sess.loading">加载中…</span></div>
     </div>
   </div>
 
   <div class="modal-overlay" id="create-modal">
     <div class="modal">
-      <h2>创建 API Token</h2>
-      <label for="desc">描述</label>
-      <input id="desc" type="text" placeholder="例如：我的笔记本、CI 服务器…" maxlength="200">
+      <h2 data-i18n="tok.modalCreateTitle">创建 API Token</h2>
+      <label for="desc" data-i18n="tok.descLabel">描述</label>
+      <input id="desc" type="text" data-i18n-ph="tok.descPh" placeholder="例如：我的笔记本、CI 服务器…" maxlength="200">
 
-      <label for="expires">过期时间</label>
+      <label for="expires" data-i18n="tok.expiresLabel">过期时间</label>
       <select id="expires">
-        <option value="7">7 天</option>
-        <option value="30" selected>30 天</option>
-        <option value="90">90 天</option>
-        <option value="365">365 天</option>
-        <option value="">永不过期</option>
+        <option value="7" data-i18n="tok.7d">7 天</option>
+        <option value="30" selected data-i18n="tok.30d">30 天</option>
+        <option value="90" data-i18n="tok.90d">90 天</option>
+        <option value="365" data-i18n="tok.365d">365 天</option>
+        <option value="" data-i18n="tok.never">永不过期</option>
       </select>
 
       <div class="btn-row">
-        <button class="btn btn-outline" onclick="closeCreate()">取消</button>
-        <button class="btn btn-primary" id="create-btn" onclick="doCreate()">创建</button>
+        <button class="btn btn-outline" onclick="closeCreate()" data-i18n="tok.cancel">取消</button>
+        <button class="btn btn-primary" id="create-btn" onclick="doCreate()" data-i18n="tok.create">创建</button>
       </div>
       <div class="msg" id="create-msg"></div>
     </div>
@@ -201,34 +172,87 @@
 
   <div class="modal-overlay" id="reveal-modal">
     <div class="modal">
-      <h2><i data-lucide="circle-check-big" aria-hidden="true"></i> Token 已创建</h2>
-      <div class="token-warn"><i data-lucide="triangle-alert" aria-hidden="true"></i> 这是你唯一一次看到此 Token，关闭后将无法再次查看。请立即复制并妥善保管！</div>
+      <h2><i data-lucide="circle-check-big" aria-hidden="true"></i> <span data-i18n="tok.createdTitle">Token 已创建</span></h2>
+      <div class="token-warn" data-i18n="tok.oneTimeWarn"><i data-lucide="triangle-alert" aria-hidden="true"></i> 这是你唯一一次看到此 Token，关闭后将无法再次查看。请立即复制并妥善保管！</div>
       <div class="token-value" id="revealed-token"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="copyToken()"><i data-lucide="clipboard" aria-hidden="true"></i> 复制 Token</button>
-      <div class="copied-msg" id="copied-msg"><i data-lucide="circle-check-big" aria-hidden="true"></i> 已复制到剪贴板</div>
+      <button class="btn btn-primary" style="width:100%" onclick="copyToken()"><i data-lucide="clipboard" aria-hidden="true"></i> <span data-i18n="tok.copy">复制 Token</span></button>
+      <div class="copied-msg" id="copied-msg"><i data-lucide="circle-check-big" aria-hidden="true"></i> <span data-i18n="tok.copied">已复制到剪贴板</span></div>
       <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-outline" style="width:100%" onclick="closeReveal()">关闭</button>
+        <button class="btn btn-outline" style="width:100%" onclick="closeReveal()" data-i18n="tok.close">关闭</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="revoke-modal">
     <div class="modal">
-      <h2>撤销 Token</h2>
-      <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">
+      <h2 data-i18n="tok.revokeTitle">撤销 Token</h2>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:16px;line-height:1.5" data-i18n="tok.revokeDesc">
         确定要撤销此 Token 吗？<br>所有使用此 Token 的客户端将立即失去访问权限。
       </p>
       <div class="btn-row">
-        <button class="btn btn-outline" onclick="closeRevoke()">取消</button>
-        <button class="btn btn-danger" id="revoke-btn" onclick="doRevoke()">确认撤销</button>
+        <button class="btn btn-outline" onclick="closeRevoke()" data-i18n="tok.cancel">取消</button>
+        <button class="btn btn-danger" id="revoke-btn" onclick="doRevoke()" data-i18n="tok.revokeConfirm">确认撤销</button>
       </div>
       <div class="msg" id="revoke-msg"></div>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="/common.js?v=lucide-v1"></script>
+  <script src="/i18n.js?v=i18n-v1"></script>
+<script src="/common.js?v=lucide-v1"></script>
   <script>
+    function renderHelpBody() {
+      const loc = currentLocale();
+      const bodies = {
+        'zh-CN': `<p>创建的 Token 可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程序化访问所有经过 Traefik <code>kazusa-auth@docker</code> 认证的 <code>*.kazusa.feng.moe</code> 服务。</p>
+        <p><strong>基本用法</strong></p>
+        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+  https://kazusa.feng.moe/api/me</code></pre>
+        <p><strong>可用端点示例</strong></p>
+        <ul><li><code>GET /api/me</code> — 获取当前登录用户信息</li><li><code>GET /api/services</code> — 列出所有服务及访问权限</li><li><code>GET /auth/tokens</code> — 管理自己的 Token</li></ul>
+        <p><strong>请求头规范</strong></p>
+        <ul><li>必须携带 <code>Authorization: Bearer &lt;token&gt;</code> 请求头</li><li>不需要额外的 CSRF Token（Bearer 认证不怕 CSRF）</li><li>与浏览器 Cookie 认证互斥，同时只需要一种</li></ul>
+        <p><strong>安全提示</strong></p>
+        <ul><li>Token 仅在创建时展示一次，请立即复制并妥善保管</li><li>如果怀疑泄露，请立即撤销，所有使用该 Token 的客户端会立即失去访问权限</li><li>建议为不同场景创建独立 Token，并设置合理的过期时间</li></ul>
+        <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> 小提示：在脚本或 CI 中使用时，建议将 Token 存入环境变量，避免硬编码。</div>`,
+        'zh-TW': `<p>建立的權杖可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程式化存取所有經過 Traefik <code>kazusa-auth@docker</code> 認證的 <code>*.kazusa.feng.moe</code> 服務。</p>
+        <p><strong>基本用法</strong></p>
+        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+  https://kazusa.feng.moe/api/me</code></pre>
+        <p><strong>可用端點範例</strong></p>
+        <ul><li><code>GET /api/me</code> — 取得目前登入者資訊</li><li><code>GET /api/services</code> — 列出所有服務及存取權限</li><li><code>GET /auth/tokens</code> — 管理自己的權杖</li></ul>
+        <p><strong>請求標頭規範</strong></p>
+        <ul><li>必須攜帶 <code>Authorization: Bearer &lt;token&gt;</code> 標頭</li><li>不需要額外的 CSRF Token（Bearer 認證不怕 CSRF）</li><li>與瀏覽器 Cookie 認證互斥，同時只需要一種</li></ul>
+        <p><strong>安全提示</strong></p>
+        <ul><li>權杖僅在建立時顯示一次，請立即複製並妥善保管</li><li>如果懷疑洩漏，請立即撤銷，所有使用該權杖的客戶端會立即失去存取權限</li><li>建議為不同場景建立獨立權杖，並設定合理的到期時間</li></ul>
+        <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> 小提示：在腳本或 CI 中使用時，建議將權杖存入環境變數，避免硬編碼。</div>`,
+        'en-US': `<p>Tokens grant programmatic access to all <code>*.kazusa.feng.moe</code> services behind Traefik <code>kazusa-auth@docker</code> via <code>Authorization: Bearer &lt;token&gt;</code>.</p>
+        <p><strong>Basic usage</strong></p>
+        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+  https://kazusa.feng.moe/api/me</code></pre>
+        <p><strong>Example endpoints</strong></p>
+        <ul><li><code>GET /api/me</code> — current user info</li><li><code>GET /api/services</code> — list services and access</li><li><code>GET /auth/tokens</code> — manage your tokens</li></ul>
+        <p><strong>Header rules</strong></p>
+        <ul><li>The <code>Authorization: Bearer &lt;token&gt;</code> header is required</li><li>No CSRF token needed (Bearer auth is CSRF-immune)</li><li>Mutually exclusive with cookie auth — use one at a time</li></ul>
+        <p><strong>Security notes</strong></p>
+        <ul><li>Tokens are shown once at creation — copy and store them safely</li><li>If you suspect leakage, revoke immediately; all clients lose access instantly</li><li>Create separate tokens per use case with sensible expiration</li></ul>
+        <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> Tip: store tokens in environment variables in scripts/CI instead of hardcoding.</div>`,
+        'ja': `<p>トークンは <code>Authorization: Bearer &lt;token&gt;</code> 形式で、Traefik <code>kazusa-auth@docker</code> 認証を通過するすべての <code>*.kazusa.feng.moe</code> サービスへプログラムからアクセスできます。</p>
+        <p><strong>基本的な使い方</strong></p>
+        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+  https://kazusa.feng.moe/api/me</code></pre>
+        <p><strong>エンドポイント例</strong></p>
+        <ul><li><code>GET /api/me</code> — 現在のユーザー情報を取得</li><li><code>GET /api/services</code> — サービスとアクセス権の一覧</li><li><code>GET /auth/tokens</code> — トークンの管理</li></ul>
+        <p><strong>ヘッダー規則</strong></p>
+        <ul><li><code>Authorization: Bearer &lt;token&gt;</code> ヘッダーが必須です</li><li>CSRF トークンは不要です（Bearer 認証は CSRF の影響を受けません）</li><li>Cookie 認証とは排他的です。同時に使うのは片方のみ</li></ul>
+        <p><strong>セキュリティ上の注意</strong></p>
+        <ul><li>トークンは作成時に一度だけ表示されます。今すぐコピーして保管してください</li><li>漏えいの疑いがある場合はすぐに取り消してください。すべてのクライアントが即座にアクセスできなくなります</li><li>用途ごとに独立したトークンを作成し、適切な有効期限を設定してください</li></ul>
+        <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> ヒント: スクリプトや CI では、ハードコードせず環境変数にトークンを保存しましょう。</div>`,
+      };
+      document.getElementById('help-body').innerHTML = bodies[loc] || bodies['zh-CN'];
+      window.lucide?.createIcons();
+    }
+    document.addEventListener('i18n:change', renderHelpBody);
     let tokens = [];
     let revokeTarget = null;
     let lastCreatedToken = '';
@@ -241,6 +265,7 @@
         if (!data.authenticated) throw new Error();
         window.csrfToken = data.csrf || '';
       } catch { window.location.href = '/login'; }
+      renderHelpBody();
       loadTokens();
     })();
 
@@ -251,39 +276,39 @@
         if (!r.ok) throw new Error();
         tokens = await r.json();
       } catch {
-        el.innerHTML = `<div class="empty"><div class="icon">${icon('circle-x')}</div>加载失败</div>`;
+        el.innerHTML = `<div class="empty"><div class="icon">${icon('circle-x')}</div>${t('sess.loadFailed')}</div>`;
         refreshIcons();
         return;
       }
 
       if (!tokens.length) {
-        el.innerHTML = `<div class="empty"><div class="icon">${icon('key-round')}</div>还没有 Token<br><span style="font-size:12px">点击上方按钮创建第一个</span></div>`;
+        el.innerHTML = `<div class="empty"><div class="icon">${icon('key-round')}</div>${t('tok.empty')}<br><span style="font-size:12px">${t('tok.emptyHint')}</span></div>`;
         refreshIcons();
         return;
       }
 
       el.innerHTML = tokens.map(t => {
         const expired = t.expires_at && new Date(t.expires_at) < new Date();
-        const badge = t.revoked ? '<span class="badge badge-revoked">已撤销</span>'
-                     : expired ? '<span class="badge badge-expired">已过期</span>'
-                     : '<span class="badge badge-active">有效</span>';
+        const badge = t.revoked ? `<span class="badge badge-revoked">${t('tok.badgeRevoked')}</span>`
+                     : expired ? `<span class="badge badge-expired">${t('tok.badgeExpired')}</span>`
+                     : `<span class="badge badge-active">${t('tok.badgeActive')}</span>`;
 
-        const desc = t.description || '<span style="color:var(--text-subtle)">无描述</span>';
-        const created = t.created_at ? new Date(t.created_at).toLocaleString('zh-CN') : '';
-        const lastUsed = t.last_used_at ? new Date(t.last_used_at).toLocaleString('zh-CN') : '从未使用';
-        const expiresStr = t.expires_at ? new Date(t.expires_at).toLocaleString('zh-CN') : '永久';
+        const desc = t.description || `<span style="color:var(--text-subtle)">${t('tok.noDesc')}</span>`;
+        const created = t.created_at ? new Date(t.created_at).toLocaleString(currentLocale()) : '';
+        const lastUsed = t.last_used_at ? new Date(t.last_used_at).toLocaleString(currentLocale()) : t('tok.neverUsed');
+        const expiresStr = t.expires_at ? new Date(t.expires_at).toLocaleString(currentLocale()) : t('tok.forever');
 
         return `<div class="card">
           <div class="card-header">
             <div>
               <div class="card-title"><code style="font-size:13px">${esc(t.prefix)}…</code> ${badge}</div>
-              <div class="card-meta">创建于 ${created}</div>
+              <div class="card-meta">${t('tok.createdAt')} ${created}</div>
             </div>
-            ${!t.revoked ? `<button class="btn btn-danger-outline btn-sm" onclick="openRevoke(${t.id})">撤销</button>` : ''}
+            ${!t.revoked ? `<button class="btn btn-danger-outline btn-sm" onclick="openRevoke(${t.id})">${t('tok.revoke')}</button>` : ''}
           </div>
           <div class="card-desc">${desc}</div>
           <div class="card-meta">
-            过期：${expiresStr} &middot; 最后使用：${lastUsed}
+            ${t('tok.expires')}：${expiresStr} &middot; ${t('tok.lastUsed')}：${lastUsed}
             ${t.user_email ? '&middot; ' + esc(t.user_email) : ''}
           </div>
         </div>`;
@@ -296,7 +321,7 @@
       document.getElementById('expires').value = '30';
       document.getElementById('create-msg').style.display = 'none';
       document.getElementById('create-btn').disabled = false;
-      document.getElementById('create-btn').textContent = '创建';
+      document.getElementById('create-btn').textContent = t('tok.create');
       document.getElementById('create-modal').classList.add('active');
     }
     function closeCreate() {
@@ -306,7 +331,7 @@
     async function doCreate() {
       const btn = document.getElementById('create-btn');
       btn.disabled = true;
-      btn.textContent = '创建中…';
+      btn.textContent = t('tok.creating');
       const msg = document.getElementById('create-msg');
 
       const desc = document.getElementById('desc').value.trim();
@@ -322,10 +347,10 @@
         const data = await r.json();
         if (!r.ok) {
           msg.className = 'msg msg-err';
-          msg.textContent = data.error || '创建失败';
+          msg.textContent = data.error || t('tok.createFailed');
           msg.style.display = 'block';
           btn.disabled = false;
-          btn.textContent = '重试';
+          btn.textContent = t('tok.retry');
           return;
         }
 
@@ -337,10 +362,10 @@
         loadTokens();
       } catch {
         msg.className = 'msg msg-err';
-        msg.textContent = '网络错误';
+        msg.textContent = t('tok.netError');
         msg.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = '重试';
+        btn.textContent = t('tok.retry');
       }
     }
 
@@ -353,7 +378,7 @@
         range.selectNode(el);
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
-        document.getElementById('copied-msg').textContent = '请手动复制 (Ctrl+C)';
+        document.getElementById('copied-msg').textContent = t('tok.copyManual');
         document.getElementById('copied-msg').style.display = 'block';
       });
     }
@@ -365,7 +390,7 @@
       revokeTarget = id;
       document.getElementById('revoke-msg').style.display = 'none';
       document.getElementById('revoke-btn').disabled = false;
-      document.getElementById('revoke-btn').textContent = '确认撤销';
+      document.getElementById('revoke-btn').textContent = t('tok.revokeConfirm');
       document.getElementById('revoke-modal').classList.add('active');
     }
     function closeRevoke() {
@@ -376,7 +401,7 @@
     async function doRevoke() {
       const btn = document.getElementById('revoke-btn');
       btn.disabled = true;
-      btn.textContent = '撤销中…';
+      btn.textContent = t('tok.revoking');
       const msg = document.getElementById('revoke-msg');
 
       try {
@@ -384,20 +409,20 @@
         if (!r.ok) {
           const data = await r.json();
           msg.className = 'msg msg-err';
-          msg.textContent = data.error || '撤销失败';
+          msg.textContent = data.error || t('tok.revokeFailed');
           msg.style.display = 'block';
           btn.disabled = false;
-          btn.textContent = '重试';
+          btn.textContent = t('tok.retry');
           return;
         }
         closeRevoke();
         loadTokens();
       } catch {
         msg.className = 'msg msg-err';
-        msg.textContent = '网络错误';
+        msg.textContent = t('tok.netError');
         msg.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = '重试';
+        btn.textContent = t('tok.retry');
       }
     }
   </script>

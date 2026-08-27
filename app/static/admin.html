@@ -121,14 +121,14 @@
 
     <div class="layout">
     <nav class="tabs" aria-label="admin sections">
-      <button class="tab active" data-tab="role-acl"><i data-lucide="shield" aria-hidden="true"></i> Role Access</button>
-      <button class="tab" data-tab="presets"><i data-lucide="user-cog" aria-hidden="true"></i> Role Presets</button>
-      <button class="tab" data-tab="users"><i data-lucide="users" aria-hidden="true"></i> Users</button>
-      <button class="tab" data-tab="user-acl"><i data-lucide="key-square" aria-hidden="true"></i> User Access</button>
-      <button class="tab" data-tab="announcements"><i data-lucide="megaphone" aria-hidden="true"></i> 公告</button>
-      <button class="tab" data-tab="services"><i data-lucide="layout-grid" aria-hidden="true"></i> 手动服务</button>
-      <button class="tab" data-tab="audit"><i data-lucide="scroll-text" aria-hidden="true"></i> 审计日志</button>
-      <button class="tab" data-tab="environment"><i data-lucide="server-cog" aria-hidden="true"></i> 系统环境</button>
+      <button class="tab active" data-tab="role-acl"><i data-lucide="shield" aria-hidden="true"></i> <span data-i18n="admin.tab.roleAcl">Role Access</span></button>
+      <button class="tab" data-tab="presets"><i data-lucide="user-cog" aria-hidden="true"></i> <span data-i18n="admin.tab.presets">Role Presets</span></button>
+      <button class="tab" data-tab="users"><i data-lucide="users" aria-hidden="true"></i> <span data-i18n="admin.tab.users">Users</span></button>
+      <button class="tab" data-tab="user-acl"><i data-lucide="key-square" aria-hidden="true"></i> <span data-i18n="admin.tab.userAcl">User Access</span></button>
+      <button class="tab" data-tab="announcements"><i data-lucide="megaphone" aria-hidden="true"></i> <span data-i18n="admin.tab.announcements">公告</span></button>
+      <button class="tab" data-tab="discovery"><i data-lucide="layout-grid" aria-hidden="true"></i> <span data-i18n="admin.tab.discovery">服务发现</span></button>
+      <button class="tab" data-tab="audit"><i data-lucide="scroll-text" aria-hidden="true"></i> <span data-i18n="admin.tab.audit">审计日志</span></button>
+      <button class="tab" data-tab="environment"><i data-lucide="server-cog" aria-hidden="true"></i> <span data-i18n="admin.tab.environment">系统环境</span></button>
     </nav>
 
     <div id="panel-content">
@@ -136,14 +136,14 @@
     <!-- Role ACL -->
     <div class="section active" id="sec-role-acl">
       <div class="section-card">
-      <h2>Role Access <span class="hint">按角色批量授权，优先于用户级规则</span></h2>
+      <h2><span data-i18n="admin.tab.roleAcl">Role Access</span> <span class="hint" data-i18n="admin.roleAcl.hint">按角色批量授权，优先于用户级规则</span></h2>
       <div class="form-row">
         <input id="racl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="racl-role" placeholder="role (e.g. user)">
         <button class="btn btn-sm btn-primary" onclick="addRoleAcl()">Add</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Domain</th><th>Role</th><th>Enabled</th><th></th></tr></thead>
+        <thead><tr><th data-i18n="th.domain">Domain</th><th data-i18n="th.role">Role</th><th data-i18n="th.enabled">Enabled</th><th></th></tr></thead>
         <tbody id="racl-body"></tbody>
       </table></div>      </div>
     </div>
@@ -151,14 +151,14 @@
     <!-- Role Presets -->
     <div class="section" id="sec-presets">
       <div class="section-card">
-      <h2>Role Presets <span class="hint">为未登录邮箱预设角色，首次登录自动生效</span></h2>
+      <h2><span data-i18n="admin.tab.presets">Role Presets</span> <span class="hint" data-i18n="admin.presets.hint">为未登录邮箱预设角色，首次登录自动生效</span></h2>
       <div class="form-row">
         <input id="preset-email" placeholder="email (e.g. friend@gmail.com)">
         <input id="preset-role" placeholder="role (e.g. friend)">
         <button class="btn btn-sm btn-primary" onclick="addPreset()">Add</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
+        <thead><tr><th data-i18n="th.email">Email</th><th data-i18n="th.role">Role</th><th></th></tr></thead>
         <tbody id="presets-body"></tbody>
       </table></div>      </div>
     </div>
@@ -168,7 +168,7 @@
       <div class="section-card">
       <h2>Users</h2>
       <div class="table-wrap"><table>
-        <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Last Login</th><th></th></tr></thead>
+        <thead><tr><th data-i18n="th.email">Email</th><th data-i18n="th.name">Name</th><th data-i18n="th.role">Role</th><th data-i18n="th.lastLogin">Last Login</th><th></th></tr></thead>
         <tbody id="users-body"></tbody>
       </table></div>      </div>
     </div>
@@ -176,14 +176,14 @@
     <!-- ACL (per-user) -->
     <div class="section" id="sec-user-acl">
       <div class="section-card">
-      <h2>User Access <span class="hint">单个用户授权，仅当 Role ACL 不匹配时生效</span></h2>
+      <h2><span data-i18n="admin.tab.userAcl">User Access</span> <span class="hint" data-i18n="admin.userAcl.hint">单个用户授权，仅当 Role ACL 不匹配时生效</span></h2>
       <div class="form-row">
         <input id="acl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="acl-email" placeholder="email (e.g. *@feng.moe)">
         <button class="btn btn-sm btn-primary" onclick="addAcl()">Add</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Domain</th><th>Email</th><th>Enabled</th><th></th></tr></thead>
+        <thead><tr><th data-i18n="th.domain">Domain</th><th data-i18n="th.email">Email</th><th data-i18n="th.enabled">Enabled</th><th></th></tr></thead>
         <tbody id="acl-body"></tbody>
       </table></div>      </div>
     </div>
@@ -191,49 +191,58 @@
     <!-- Announcements -->
     <div class="section" id="sec-announcements">
       <div class="section-card">
-      <h2>公告管理 <span class="hint">发布的公告会在主页顶部显示</span></h2>
+      <h2><span data-i18n="ann.h2">公告管理</span> <span class="hint" data-i18n="ann.hint">发布的公告会在主页顶部显示</span></h2>
       <div class="form-row">
-        <input id="ann-message" placeholder="公告内容">
-        <select id="ann-level"><option value="info">信息</option><option value="warn">警告</option><option value="error">紧急</option></select>
-        <button class="btn btn-sm btn-primary" onclick="addAnnouncement()">发布</button>
+        <input id="ann-message" data-i18n-ph="ann.ph" placeholder="公告内容">
+        <select id="ann-level"><option value="info" data-i18n="ann.level.info">信息</option><option value="warn" data-i18n="ann.level.warn">警告</option><option value="error" data-i18n="ann.level.error">紧急</option></select>
+        <button class="btn btn-sm btn-primary" onclick="addAnnouncement()" data-i18n="ann.publish">发布</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>内容</th><th>级别</th><th>状态</th><th>时间</th><th></th></tr></thead>
+        <thead><tr><th data-i18n="th.content">内容</th><th data-i18n="th.level">级别</th><th data-i18n="th.status">状态</th><th data-i18n="th.time">时间</th><th></th></tr></thead>
         <tbody id="ann-body"></tbody>
       </table></div>      </div>
     </div>
 
     <!-- Manual Services -->
-    <div class="section" id="sec-services">
+    <div class="section" id="sec-discovery">
       <div class="section-card">
-      <h2>手动服务 <span class="hint">注册无 Docker label 的 Traefik 路由（如 dsh / hermes-dashboard），Host 用于 ACL 授权</span></h2>
+      <h2><span data-i18n="admin.tab.discovery">服务发现</span> <span class="hint" data-i18n="admin.discovery.hint">Docker 自动发现的服务为只读展示；手动服务用于注册无 Docker label 的路由</span></h2>
+
+      <h3 style="font-size:13px;font-weight:600;margin-bottom:8px;"><span data-i18n="admin.dockerDiscovered">Docker 自动发现（只读）</span></h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th data-i18n="th.title">标题</th><th data-i18n="th.host">Host</th><th data-i18n="th.category">分类</th><th>Status</th></tr></thead>
+        <tbody id="disc-body"></tbody>
+      </table></div>
+
+      <h3 style="font-size:13px;font-weight:600;margin:20px 0 8px;"><span data-i18n="admin.manualServices">手动服务</span></h3>
       <div class="form-row">
-        <input id="ms-title" placeholder="标题">
-        <input id="ms-host" placeholder="host (e.g. dsh.kazusa.feng.moe)">
-        <input id="ms-icon" placeholder="图标 (emoji)" value="📁">
-        <input id="ms-category" placeholder="分类">
-        <button class="btn btn-sm btn-primary" onclick="addManualService()">添加</button>
+        <input id="ms-title" data-i18n-ph="ms.title.ph" placeholder="标题">
+        <input id="ms-host" data-i18n-ph="ms.host.ph" placeholder="host (e.g. dsh.kazusa.feng.moe)">
+        <input id="ms-icon" data-i18n-ph="ms.icon.ph" placeholder="图标 (emoji)" value="📁">
+        <input id="ms-category" data-i18n-ph="ms.category.ph" placeholder="分类">
+        <button class="btn btn-sm btn-primary" onclick="addManualService()" data-i18n="ms.add">添加</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>标题</th><th>Host</th><th>分类</th><th>排序</th><th>启用</th><th></th></tr></thead>
+        <thead><tr><th data-i18n="th.title">标题</th><th data-i18n="th.host">Host</th><th data-i18n="th.category">分类</th><th data-i18n="th.sort">排序</th><th data-i18n="th.enabled">启用</th><th></th></tr></thead>
         <tbody id="ms-body"></tbody>
-      </table></div>      </div>
+      </table></div>
+      </div>
     </div>
 
     <!-- System environment -->
     <div class="section" id="sec-environment">
       <div class="section-card">
-      <h2>系统环境 <span class="hint">仅显示运行时非敏感配置；Token、Secret、Password 等变量由服务端直接过滤</span></h2>
-      <div id="environment-content"><p class="env-empty">加载中…</p></div>
+      <h2><span data-i18n="admin.tab.environment">系统环境</span> <span class="hint" data-i18n="admin.environment.hint">仅显示运行时非敏感配置；Token、Secret、Password 等变量由服务端直接过滤</span></h2>
+      <div id="environment-content"><p class="env-empty" data-i18n="sess.loading">加载中…</p></div>
       </div>
     </div>
 
     <!-- Audit Log -->
     <div class="section" id="sec-audit">
       <div class="section-card">
-      <h2>审计日志 <span class="hint">记录所有管理操作</span></h2>
+      <h2><span data-i18n="admin.tab.audit">审计日志</span> <span class="hint" data-i18n="admin.audit.hint">记录所有管理操作</span></h2>
       <div class="table-wrap"><table>
-        <thead><tr><th>时间</th><th>操作者</th><th>操作</th><th>目标</th><th>详情</th></tr></thead>
+        <thead><tr><th data-i18n="th.time">时间</th><th data-i18n="th.actor">操作者</th><th data-i18n="th.action">操作</th><th data-i18n="th.target">目标</th><th data-i18n="th.details">详情</th></tr></thead>
         <tbody id="audit-body"></tbody>
       </table></div>      </div>
     </div>
@@ -242,6 +251,7 @@
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+<script src="/i18n.js?v=i18n-v1"></script>
 <script src="/common.js?v=lucide-v1"></script>
 <script>
 const msg = document.getElementById('msg');
@@ -260,7 +270,7 @@ tabs.forEach(tab => {
     sections.forEach(s => s.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('sec-' + tab.dataset.tab).classList.add('active');
-    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl, 'announcements': loadAnnouncements, 'services': loadManualServices, 'audit': loadAudit, 'environment': loadEnvironment };
+    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl, 'announcements': loadAnnouncements, 'discovery': loadDiscovery, 'audit': loadAudit, 'environment': loadEnvironment };
     const fn = loaders[tab.dataset.tab];
     if (fn) fn();
   });
@@ -294,7 +304,7 @@ async function loadRoleAcl() {
     <tr>
       <td><code>${esc(r.domain)}</code></td>
       <td><span class="badge badge-${r.role === 'admin' ? 'admin' : r.role === 'user' ? 'user' : 'custom'}">${esc(r.role)}</span></td>
-      <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
+      <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
       <td><button class="btn btn-sm btn-danger" onclick="delRoleAcl(${r.id})">delete</button></td>
     </tr>
   `).join('');
@@ -413,7 +423,7 @@ async function loadAcl() {
   document.getElementById('acl-body').innerHTML = rules.map(r => `<tr>
     <td>${esc(r.domain)}</td>
     <td>${esc(r.email)}</td>
-    <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
+    <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
     <td><button class="btn btn-sm btn-danger" onclick="delAcl(${r.id})">delete</button></td>
   </tr>`).join('');
   refreshIcons();
@@ -440,11 +450,11 @@ async function loadAnnouncements() {
   const r = await apiFetch('/api/admin/announcements');
   if (!r.ok) return;
   const items = await r.json();
-  const levelLabel = {info:'信息', warn:'警告', error:'紧急'};
+  const levelLabel = {info:t('ann.level.info'), warn:t('ann.level.warn'), error:t('ann.level.error')};
   document.getElementById('ann-body').innerHTML = items.map(a => `<tr>
     <td>${esc(a.message)}</td>
     <td><span class="badge badge-${a.level === 'error' ? 'admin' : a.level === 'warn' ? 'custom' : 'user'}">${levelLabel[a.level] || a.level}</span></td>
-    <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
+    <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
     <td class="audit-time">${new Date(a.created_at).toLocaleString()}</td>
     <td><button class="btn btn-sm btn-danger" onclick="delAnnouncement(${a.id})">delete</button></td>
   </tr>`).join('');
@@ -455,7 +465,7 @@ async function addAnnouncement() {
   const level = document.getElementById('ann-level').value;
   if (!message) { showMsg('message required', false); return; }
   const r = await apiFetch('/api/admin/announcements', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message, level})});
-  if (r.ok) { showMsg('公告已发布'); document.getElementById('ann-message').value=''; loadAnnouncements(); }
+  if (r.ok) { showMsg(t('ann.published')); document.getElementById('ann-message').value=''; loadAnnouncements(); }
   else showMsg('failed', false);
 }
 async function toggleAnnouncement(id, active) {
@@ -464,40 +474,40 @@ async function toggleAnnouncement(id, active) {
 }
 async function delAnnouncement(id) {
   await apiFetch(`/api/admin/announcements/${id}`, {method:'DELETE'});
-  showMsg('公告已删除'); loadAnnouncements();
+  showMsg(t('ms.deleted')); loadAnnouncements();
 }
 
 // ── System environment ──
 function envTable(items) {
-  if (!items || !items.length) return '<p class="env-empty">没有可显示的非敏感变量</p>';
+  if (!items || !items.length) return `<p class="env-empty">${t('audit.empty')}</p>`;
   return `<div class="table-wrap"><table class="env-table"><tbody>${items.map(item => `<tr><td>${esc(item.key)}</td><td>${esc(item.value) || '—'}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function envCard(title, items, hiddenCount, meta='') {
-  const hidden = hiddenCount ? ` · 已隐藏 ${hiddenCount} 项敏感变量` : '';
+  const hidden = hiddenCount ? ` · ${t('env.hidden', { n: hiddenCount })}` : '';
   return `<div class="env-card"><div class="env-card-header"><h3>${esc(title)}</h3><span class="env-meta">${esc(meta)}${esc(hidden)}</span></div>${envTable(items)}</div>`;
 }
 async function loadEnvironment() {
   const r = await apiFetch('/api/admin/system-environment');
-  if (!r.ok) { showMsg('系统环境读取失败', false); return; }
+  if (!r.ok) { showMsg(t('env.loadFailed'), false); return; }
   const data = await r.json();
   const portal = data.portal || {};
   const tsummt = data.tsummt || {};
   let html = '<div class="env-grid">';
-  html += envCard('kazusa-home-portal', portal.environment, portal.hidden_count, '当前容器');
+  html += envCard('kazusa-home-portal', portal.environment, portal.hidden_count, t('env.currentContainer'));
   if (tsummt.available) {
     const c = tsummt.container || {};
     html += envCard('tsummt', tsummt.environment, tsummt.hidden_count, `${c.status || 'unknown'} · ${c.image || c.name || ''}`);
   } else {
-    html += '<div class="env-card"><div class="env-card-header"><h3>tsummt</h3></div><p class="env-empty">暂时无法读取 tsummt 运行时配置</p></div>';
+    html += `<div class="env-card"><div class="env-card-header"><h3>tsummt</h3></div><p class="env-empty">${t('env.unavailable')}</p></div>`;
   }
   html += '</div>';
   if (tsummt.available) {
     const c = tsummt.container || {};
     const mounts = tsummt.mounts || [];
-    html += `<div class="env-detail"><h2>tsummt 运行信息</h2><div class="table-wrap"><table><tbody>
-      <tr><td>容器</td><td>${esc(c.name)}</td></tr><tr><td>镜像</td><td><code>${esc(c.image)}</code></td></tr>
-      <tr><td>状态</td><td>${esc(c.status)} · 重启 ${esc(String(c.restart_count ?? 0))} 次</td></tr>
-      <tr><td>挂载</td><td>${mounts.length ? mounts.map(m => `<code>${esc(m.source)} → ${esc(m.destination)}</code>`).join('<br>') : '—'}</td></tr>
+    html += `<div class="env-detail"><h2>${t('env.runInfo')}</h2><div class="table-wrap"><table><tbody>
+      <tr><td>${t('env.container')}</td><td>${esc(c.name)}</td></tr><tr><td>${t('env.image')}</td><td><code>${esc(c.image)}</code></td></tr>
+      <tr><td>${t('env.status')}</td><td>${esc(c.status)} · ${t('env.restarts', { n: esc(String(c.restart_count ?? 0)) })}</td></tr>
+      <tr><td>${t('env.mounts')}</td><td>${mounts.length ? mounts.map(m => `<code>${esc(m.source)} → ${esc(m.destination)}</code>`).join('<br>') : '—'}</td></tr>
     </tbody></table></div></div>`;
   }
   document.getElementById('environment-content').innerHTML = html;
@@ -508,6 +518,7 @@ async function loadAudit() {
   const r = await apiFetch('/api/admin/audit');
   if (!r.ok) return;
   const logs = await r.json();
+  if (!logs.length) { document.getElementById('audit-body').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-subtle);">${t('audit.empty')}</td></tr>`; return; }
   document.getElementById('audit-body').innerHTML = logs.map(l => `<tr>
     <td class="audit-time">${new Date(l.created_at).toLocaleString()}</td>
     <td>${esc(l.actor_email)}</td>
@@ -516,6 +527,27 @@ async function loadAudit() {
     <td style="color:var(--text-muted);font-size:12px">${esc(l.details)}</td>
   </tr>`).join('');
   refreshIcons();
+}
+
+// ── Service Discovery (docker read-only + manual management) ──
+async function loadDiscovery() {
+  loadManualServices();
+  try {
+    const r = await apiFetch('/api/admin/service-discovery');
+    if (!r.ok) return;
+    const items = await r.json();
+    const body = document.getElementById('disc-body');
+    if (!items.length) {
+      body.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-subtle);">${t('audit.empty')}</td></tr>`;
+      return;
+    }
+    body.innerHTML = items.map(d => `<tr>
+      <td>${d.icon ? esc(d.icon) + ' ' : ''}${esc(d.title)}</td>
+      <td>${d.host ? `<code>${esc(d.host)}</code>` : '—'}</td>
+      <td>${esc(d.category) || '—'}</td>
+      <td><span class="status-dot status-${esc(d.status)}" style="display:inline-block;margin:0;" title="${esc(d.status)}"></span> ${esc(d.status)}</td>
+    </tr>`).join('');
+  } catch {}
 }
 
 // ── Manual Services ──
@@ -528,7 +560,7 @@ async function loadManualServices() {
     <td>${s.host ? `<code>${esc(s.host)}</code>` : '—'}</td>
     <td>${esc(s.category) || '—'}</td>
     <td>${esc(String(s.order ?? 100))}</td>
-    <td class="toggle" onclick="toggleManualService(${s.id},${!s.enabled})">${s.enabled ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
+    <td class="toggle" onclick="toggleManualService(${s.id},${!s.enabled})">${s.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
     <td><button class="btn btn-sm btn-danger" onclick="delManualService(${s.id})">delete</button></td>
   </tr>`).join('');
   refreshIcons();
@@ -538,19 +570,19 @@ async function addManualService() {
   const host = document.getElementById('ms-host').value.trim();
   const icon = document.getElementById('ms-icon').value.trim();
   const category = document.getElementById('ms-category').value.trim();
-  if (!title) { showMsg('标题必填', false); return; }
+  if (!title) { showMsg(t('ms.titleRequired'), false); return; }
   const r = await apiFetch('/api/admin/manual-services', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, host, icon: icon || '📁', category, order: 100})});
-  if (r.ok) { showMsg('已添加手动服务'); ['ms-title','ms-host','ms-category'].forEach(id => document.getElementById(id).value=''); loadManualServices(); }
-  else { const e = await r.json(); showMsg(e.error || '添加失败', false); }
+  if (r.ok) { showMsg(t('ms.added')); ['ms-title','ms-host','ms-category'].forEach(id => document.getElementById(id).value=''); loadManualServices(); }
+  else { const e = await r.json(); showMsg(e.error || t('ms.failed'), false); }
 }
 async function toggleManualService(id, enabled) {
   await apiFetch(`/api/admin/manual-services/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
   loadManualServices();
 }
 async function delManualService(id) {
-  if (!confirm('删除该手动服务？')) return;
+  if (!confirm(t('ms.confirmDelete'))) return;
   await apiFetch(`/api/admin/manual-services/${id}`, {method:'DELETE'});
-  showMsg('已删除'); loadManualServices();
+  showMsg(t('ms.deleted')); loadManualServices();
 }
 
 init();

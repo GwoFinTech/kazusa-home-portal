@@ -587,6 +587,11 @@ def common_js():
     return FileResponse(os.path.join(STATIC_DIR, "common.js"), media_type="application/javascript")
 
 
+@app.get("/i18n.js")
+def i18n_js():
+    return FileResponse(os.path.join(STATIC_DIR, "i18n.js"), media_type="application/javascript")
+
+
 @app.get("/manifest.json")
 def manifest():
     return FileResponse(os.path.join(STATIC_DIR, "manifest.json"), media_type="application/manifest+json")

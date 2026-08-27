@@ -695,13 +695,22 @@ async def qr_confirm_page(request: Request):
   <link rel="stylesheet" href="/common.css?v=tokens-v1">
   <title>扫码确认 — kazusa</title>
   <style>
-    body {{ min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }}
-    .confirm-card {{
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 40px 32px; text-align: center; max-width: 380px; width: 100%;
+    body {{ min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px; }}
+    .confirm-shell {{
+      background: var(--hover-bg); border: 1px solid var(--border);
+      border-radius: calc(var(--radius-lg) + 6px); padding: 8px;
       box-shadow: var(--shadow-1);
+      animation: shell-in 500ms var(--ease-out) backwards;
     }}
-    .confirm-card h1 {{ font-size: 20px; font-weight: 600; margin-bottom: 6px; }}
+    @keyframes shell-in {{
+      from {{ opacity: 0; transform: translateY(12px) scale(.98); }}
+      to   {{ opacity: 1; transform: translateY(0) scale(1); }}
+    }}
+    .confirm-card {{
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 40px 32px; text-align: center; max-width: 380px; width: 100%;
+    }}
+    .confirm-card h1 {{ font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }}
     .confirm-card p {{ font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }}
     .user-info {{
       display: flex; align-items: center; gap: 12px; padding: 14px 16px;
@@ -717,6 +726,7 @@ async def qr_confirm_page(request: Request):
   </style>
 </head>
 <body>
+  <div class="confirm-shell">
   <div class="confirm-card">
     <h1>扫码登录确认</h1>
     <p>另一台设备请求登录你的账号，请确认是否授权</p>
@@ -730,6 +740,7 @@ async def qr_confirm_page(request: Request):
     <button class="btn btn-primary" id="confirm-btn">确认授权</button>
     <button class="btn btn-outline" id="cancel-btn" onclick="window.location.href='{config.PORTAL_URL}'">取消</button>
     <div class="msg" id="msg"></div>
+  </div>
   </div>
   <script>
     document.getElementById('confirm-btn').addEventListener('click', async function() {{

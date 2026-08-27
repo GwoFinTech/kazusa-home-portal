@@ -13,12 +13,18 @@
     .header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
     .header h1 { font-size: 22px; font-weight: 700; }
     .header .sub { font-size: 13px; color: var(--text-muted); }
-    .header .back { font-size: 13px; color: var(--accent); text-decoration: none; margin-left: auto; }
+    .header .back { font-size: 13px; color: var(--primary); text-decoration: none; margin-left: auto; }
     .header .back:hover { text-decoration: underline; }
 
     .card {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 20px; margin-bottom: 16px;
+      box-shadow: var(--shadow-1);
+      animation: card-in 500ms var(--ease-out) backwards;
+    }
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
     .card-title { font-weight: 600; font-size: 14px; }
@@ -44,10 +50,16 @@
       background: rgba(0,0,0,.5); backdrop-filter: blur(2px);
       align-items: center; justify-content: center;
     }
-    .modal-overlay.active { display: flex; }
+    .modal-overlay.active { display: flex; animation: overlay-in var(--dur-fast) var(--ease-out); }
     .modal {
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 28px 24px; max-width: 440px; width: 90%; box-shadow: var(--shadow-1);
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 28px 24px; max-width: 440px; width: 90%; box-shadow: var(--shadow-2);
+      animation: modal-in var(--dur-med) var(--ease-out);
+    }
+    @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(.96) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
     }
     .modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
     .modal label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 4px; color: var(--text-muted); }
@@ -56,7 +68,7 @@
       background: var(--bg); color: var(--text); font-size: 14px; margin-bottom: 14px;
       box-sizing: border-box;
     }
-    .modal input:focus, .modal select:focus { outline: none; border-color: var(--accent); }
+    .modal input:focus, .modal select:focus { outline: none; border-color: var(--primary); }
     .modal .btn-row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
     .modal .msg { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 13px; display: none; }
     .modal .msg-ok { background: color-mix(in srgb, var(--success) 10%, transparent); color: var(--success); display: block; }

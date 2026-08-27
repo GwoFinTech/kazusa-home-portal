@@ -13,7 +13,7 @@
     .header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
     .header h1 { font-size: 22px; font-weight: 700; }
     .header .sub { font-size: 13px; color: var(--text-muted); }
-    .header .back { font-size: 13px; color: var(--accent); text-decoration: none; margin-left: auto; }
+    .header .back { font-size: 13px; color: var(--primary); text-decoration: none; margin-left: auto; }
     .header .back:hover { text-decoration: underline; }
 
     .toolbar { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
@@ -22,6 +22,12 @@
     .session-card {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 14px;
+      box-shadow: var(--shadow-1);
+      animation: card-in 500ms var(--ease-out) backwards;
+    }
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .session-icon { flex-shrink: 0; }
     .session-icon .lucide { width: 28px; height: 28px; }

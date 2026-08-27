@@ -8,13 +8,23 @@
   <link rel="stylesheet" href="/common.css?v=tokens-v1">
   <title>sign in — home</title>
   <style>
-    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-    .login-card {
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 40px; text-align: center; max-width: 360px; width: 100%;
+    body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .login-shell {
+      background: var(--hover-bg); border: 1px solid var(--border);
+      border-radius: calc(var(--radius-lg) + 6px); padding: 8px;
       box-shadow: var(--shadow-1);
+      animation: shell-in 500ms var(--ease-out) backwards;
     }
-    .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    @keyframes shell-in {
+      from { opacity: 0; transform: translateY(12px) scale(.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .login-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 40px; text-align: center; max-width: 340px; width: 100%;
+      box-shadow: inset 0 1px 1px rgba(255,255,255,.06);
+    }
+    .login-card h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
     .login-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
     .divider {
       display: flex; align-items: center; gap: 12px; margin: 20px 0;
@@ -35,6 +45,7 @@
   </style>
 </head>
 <body>
+  <div class="login-shell">
   <div class="login-card" id="login-card">
     <h1>home</h1>
     <p>Sign in to continue</p>
@@ -56,6 +67,7 @@
       <div id="qr-status">正在生成二维码…</div>
       <div class="qr-hint">用已登录的设备打开摄像头扫描</div>
     </div>
+  </div>
   </div>
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>

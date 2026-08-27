@@ -8,48 +8,108 @@
   <link rel="stylesheet" href="/common.css?v=tokens-v1">
   <title>admin — home</title>
   <style>
-    body { padding: 24px; max-width: 800px; margin: 0 auto; }
-    h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
-    .back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: inline-block; margin-bottom: 8px; }
+    body { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .back { font-size: 13px; color: var(--text-muted); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 8px; }
     .back:hover { color: var(--text); }
-    .tabs { display: flex; gap: 0; margin: 16px 0 0; border-bottom: 1px solid var(--border); border-radius: 0; overflow-x: auto; }
-    .tab { padding: 10px 16px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; border-radius: 0; transition: color .15s, border-color .15s; white-space: nowrap; }
-    .tab:hover { color: var(--text); }
-    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .section { display: none; }
-    .section.active { display: block; }
-    h2 { font-size: 15px; font-weight: 600; margin: 20px 0 12px; }
-    h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-subtle); margin-left: 8px; }
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
-    th { text-align: left; padding: 8px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
-    td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
-    tr:hover td { background: var(--hover-bg); }
-    .role-input { width: 80px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--card-bg); color: var(--text); font-size: 12px; font-family: inherit; }
-    .role-input:focus { outline: none; border-color: #94a3b8; }
-    .form-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
-    .form-row button { flex-shrink: 0; }
-    .form-row input, .form-row select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card-bg); color: var(--text); font-size: 13px; flex: 1; min-width: 120px; }
-    .form-row input:focus, .form-row select:focus { outline: none; border-color: #94a3b8; }
-    .toggle { cursor: pointer; }
+    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px; }
     #denied { text-align: center; padding: 80px 24px; color: var(--text-muted); }
-    .audit-time { color: var(--text-subtle); font-size: 11px; white-space: nowrap; }
-    .audit-action { font-weight: 500; }
+
+    /* ── Layout: side nav (desktop) / horizontal tabs (mobile) ── */
+    .layout { display: flex; gap: 24px; align-items: flex-start; margin-top: 20px; }
+
+    .tabs {
+      display: flex; flex-direction: column; gap: 2px;
+      position: sticky; top: 24px;
+      min-width: 160px; padding: 6px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow-1);
+    }
+    .tab {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px; font-size: 13px; font-weight: 500; font-family: inherit;
+      color: var(--text-muted); cursor: pointer;
+      border: none; background: none; border-radius: var(--radius-sm);
+      text-align: left; white-space: nowrap;
+      transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+    }
+    .tab:hover { color: var(--text); background: var(--hover-bg); }
+    .tab.active { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); font-weight: 600; }
+    .tab .lucide-icon { width: 15px; height: 15px; opacity: .75; }
+    .tab.active .lucide-icon { opacity: 1; }
+
+    #panel-content { flex: 1; min-width: 0; }
+
+    @media (max-width: 768px) {
+      body { padding: 16px; max-width: none; }
+      .layout { flex-direction: column; gap: 12px; }
+      .tabs {
+        position: static; flex-direction: row; min-width: 0; width: 100%;
+        border-radius: 0; box-shadow: none; padding: 0;
+        border-bottom: 1px solid var(--border); overflow-x: auto;
+        gap: 0; background: none;
+      }
+      .tab { padding: 10px 12px; font-size: 12px; border-bottom: 2px solid transparent; border-radius: 0; }
+      .tab.active { background: none; border-bottom-color: var(--primary); }
+    }
+
+    /* ── Sections & cards ── */
+    .section { display: none; animation: section-in var(--dur-med) var(--ease-out); }
+    .section.active { display: block; }
+    @keyframes section-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    h2 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
+    h2 .hint { font-size: 11px; font-weight: 400; color: var(--text-subtle); margin-left: 8px; }
+    .section-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
+      padding: 20px;
+    }
+    .form-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
+    .form-row button { flex-shrink: 0; }
+    .form-row input, .form-row select {
+      padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit;
+      flex: 1; min-width: 120px;
+      transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+    }
+    .form-row input:focus, .form-row select:focus {
+      outline: none; border-color: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+    }
+    .toggle { cursor: pointer; }
+    .toggle:hover { color: var(--success); }
+
+    /* ── Tables inside cards ── */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 480px; }
+    th {
+      text-align: left; padding: 9px 14px; color: var(--text-subtle);
+      font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--hover-bg);
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+    tbody tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--hover-bg); }
+    td code { font-family: var(--font-mono); font-size: 12px; background: var(--hover-bg); padding: 1px 6px; border-radius: 4px; }
+    .role-input { width: 80px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--card-bg); color: var(--text); font-size: 12px; font-family: inherit; }
+    .role-input:focus { outline: none; border-color: var(--primary); }
+    .audit-time { color: var(--text-subtle); font-size: 11px; white-space: nowrap; font-family: var(--font-mono); }
+    .audit-action { font-weight: 500; font-family: var(--font-mono); font-size: 12px; }
+
+    /* env cards (container standard for grouped runtime data) */
     .env-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-    .env-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card-bg); }
+    .env-card { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; background: var(--card-bg); }
     .env-card-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .env-card-header h3 { font-size: 14px; font-weight: 600; }
-    .env-meta { color: var(--text-muted); font-size: 11px; }
-    .env-table { min-width: 0; table-layout: fixed; }
-    .env-table td:first-child { width: 46%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--text-muted); word-break: break-word; }
-    .env-table td:last-child { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-word; }
+    .env-meta { color: var(--text-subtle); font-size: 11px; }
+    .env-table { min-width: 0; table-layout: fixed; border: none; border-radius: 0; }
+    .env-table td:first-child { width: 46%; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); word-break: break-word; }
+    .env-table td:last-child { font-family: var(--font-mono); font-size: 12px; word-break: break-word; }
     .env-empty { padding: 20px 14px; color: var(--text-muted); font-size: 13px; }
     .env-detail { margin-top: 16px; }
-    .env-detail pre { margin: 0; padding: 12px; overflow: auto; background: var(--hover-bg); color: var(--text-muted); font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-    @media (max-width: 480px) {
-      body { padding: 16px; }
-      .tab { padding: 10px 12px; font-size: 12px; }
-    }
+    .env-detail pre { margin: 0; padding: 12px; overflow: auto; background: var(--hover-bg); color: var(--text-muted); font: 11px/1.5 var(--font-mono); }
   </style>
 </head>
 <body>
@@ -59,19 +119,23 @@
   <div id="panel" style="display:none">
     <div id="msg" class="msg"></div>
 
-    <div class="tabs">
-      <button class="tab active" data-tab="role-acl">Role Access</button>
-      <button class="tab" data-tab="presets">Role Presets</button>
-      <button class="tab" data-tab="users">Users</button>
-      <button class="tab" data-tab="user-acl">User Access</button>
-      <button class="tab" data-tab="announcements">公告</button>
-      <button class="tab" data-tab="services">手动服务</button>
-      <button class="tab" data-tab="audit">审计日志</button>
-      <button class="tab" data-tab="environment">系统环境</button>
-    </div>
+    <div class="layout">
+    <nav class="tabs" aria-label="admin sections">
+      <button class="tab active" data-tab="role-acl"><i data-lucide="shield" aria-hidden="true"></i> Role Access</button>
+      <button class="tab" data-tab="presets"><i data-lucide="user-cog" aria-hidden="true"></i> Role Presets</button>
+      <button class="tab" data-tab="users"><i data-lucide="users" aria-hidden="true"></i> Users</button>
+      <button class="tab" data-tab="user-acl"><i data-lucide="key-square" aria-hidden="true"></i> User Access</button>
+      <button class="tab" data-tab="announcements"><i data-lucide="megaphone" aria-hidden="true"></i> 公告</button>
+      <button class="tab" data-tab="services"><i data-lucide="layout-grid" aria-hidden="true"></i> 手动服务</button>
+      <button class="tab" data-tab="audit"><i data-lucide="scroll-text" aria-hidden="true"></i> 审计日志</button>
+      <button class="tab" data-tab="environment"><i data-lucide="server-cog" aria-hidden="true"></i> 系统环境</button>
+    </nav>
+
+    <div id="panel-content">
 
     <!-- Role ACL -->
     <div class="section active" id="sec-role-acl">
+      <div class="section-card">
       <h2>Role Access <span class="hint">按角色批量授权，优先于用户级规则</span></h2>
       <div class="form-row">
         <input id="racl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
@@ -81,11 +145,12 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Domain</th><th>Role</th><th>Enabled</th><th></th></tr></thead>
         <tbody id="racl-body"></tbody>
-      </table></div>
+      </table></div>      </div>
     </div>
 
     <!-- Role Presets -->
     <div class="section" id="sec-presets">
+      <div class="section-card">
       <h2>Role Presets <span class="hint">为未登录邮箱预设角色，首次登录自动生效</span></h2>
       <div class="form-row">
         <input id="preset-email" placeholder="email (e.g. friend@gmail.com)">
@@ -95,20 +160,22 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
         <tbody id="presets-body"></tbody>
-      </table></div>
+      </table></div>      </div>
     </div>
 
     <!-- Users -->
     <div class="section" id="sec-users">
+      <div class="section-card">
       <h2>Users</h2>
       <div class="table-wrap"><table>
         <thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Last Login</th><th></th></tr></thead>
         <tbody id="users-body"></tbody>
-      </table></div>
+      </table></div>      </div>
     </div>
 
     <!-- ACL (per-user) -->
     <div class="section" id="sec-user-acl">
+      <div class="section-card">
       <h2>User Access <span class="hint">单个用户授权，仅当 Role ACL 不匹配时生效</span></h2>
       <div class="form-row">
         <input id="acl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
@@ -118,11 +185,12 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Domain</th><th>Email</th><th>Enabled</th><th></th></tr></thead>
         <tbody id="acl-body"></tbody>
-      </table></div>
+      </table></div>      </div>
     </div>
 
     <!-- Announcements -->
     <div class="section" id="sec-announcements">
+      <div class="section-card">
       <h2>公告管理 <span class="hint">发布的公告会在主页顶部显示</span></h2>
       <div class="form-row">
         <input id="ann-message" placeholder="公告内容">
@@ -132,11 +200,12 @@
       <div class="table-wrap"><table>
         <thead><tr><th>内容</th><th>级别</th><th>状态</th><th>时间</th><th></th></tr></thead>
         <tbody id="ann-body"></tbody>
-      </table></div>
+      </table></div>      </div>
     </div>
 
     <!-- Manual Services -->
     <div class="section" id="sec-services">
+      <div class="section-card">
       <h2>手动服务 <span class="hint">注册无 Docker label 的 Traefik 路由（如 dsh / hermes-dashboard），Host 用于 ACL 授权</span></h2>
       <div class="form-row">
         <input id="ms-title" placeholder="标题">
@@ -148,23 +217,28 @@
       <div class="table-wrap"><table>
         <thead><tr><th>标题</th><th>Host</th><th>分类</th><th>排序</th><th>启用</th><th></th></tr></thead>
         <tbody id="ms-body"></tbody>
-      </table></div>
+      </table></div>      </div>
     </div>
 
     <!-- System environment -->
     <div class="section" id="sec-environment">
+      <div class="section-card">
       <h2>系统环境 <span class="hint">仅显示运行时非敏感配置；Token、Secret、Password 等变量由服务端直接过滤</span></h2>
       <div id="environment-content"><p class="env-empty">加载中…</p></div>
+      </div>
     </div>
 
     <!-- Audit Log -->
     <div class="section" id="sec-audit">
+      <div class="section-card">
       <h2>审计日志 <span class="hint">记录所有管理操作</span></h2>
       <div class="table-wrap"><table>
         <thead><tr><th>时间</th><th>操作者</th><th>操作</th><th>目标</th><th>详情</th></tr></thead>
         <tbody id="audit-body"></tbody>
-      </table></div>
+      </table></div>      </div>
     </div>
+  </div>
+  </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>

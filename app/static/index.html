@@ -233,7 +233,7 @@ const annDiv = document.getElementById('announcements');
 
 let isAuthenticated = false;
 
-document.addEventListener('i18n:change', () => { loadServices(); });
+document.addEventListener('i18n:change', () => { loadServices(true); });
 
 async function loadUser() {
   try {
@@ -310,8 +310,20 @@ function groupLabel(c) {
   return String(c).trim();
 }
 
-function renderServices(services) {
+let lastServicesFp = null;
+function servicesFingerprint(services) {
+  return services.map(s =>
+    [s.title, s.host, s.category, s.status, (s.health && s.health.status) || '', s.icon].join('|')
+  ).join('\n');
+}
+
+function renderServices(services, force) {
   subtitle.textContent = t('portal.serviceCount', { n: services.length });
+  const fp = servicesFingerprint(services);
+  // Skip DOM rewrite when data is unchanged — avoids replaying the card
+  // entrance animation on every 30s poll. force=true (locale switch) always renders.
+  if (!force && fp === lastServicesFp && grid.querySelector('.card')) return;
+  lastServicesFp = fp;
   if (!services.length) { grid.innerHTML = `<div class="empty">${t('portal.noServices')}</div>`; return; }
   // Group by category preserving first-appearance order
   const groups = new Map();
@@ -344,7 +356,7 @@ function renderServices(services) {
   `).join('');
 }
 
-async function loadServices() {
+async function loadServices(force) {
   if (!isAuthenticated) {
     subtitle.textContent = t('portal.loginRequired');
     grid.innerHTML = `
@@ -357,7 +369,7 @@ async function loadServices() {
   try {
     const res = await fetch('/api/services');
     if (!res.ok) throw new Error();
-    renderServices(await res.json());
+    renderServices(await res.json(), force);
   } catch { subtitle.textContent = t('portal.loadFailed'); }
 }
 

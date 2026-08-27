@@ -350,7 +350,7 @@ async function loadServices() {
     grid.innerHTML = `
       <div class="empty">
         <p style="margin-bottom:16px;color:var(--text-muted);">${t('portal.loginToView')}</p>
-        <button class="btn btn-primary" onclick="location.href='/auth/login'">${t('portal.loginGoogle')}</button>
+        <button class="btn" onclick="location.href='/auth/login'">${t('portal.loginGoogle')}</button>
       </div>`;
     return;
   }

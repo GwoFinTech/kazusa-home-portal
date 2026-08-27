@@ -140,7 +140,7 @@
       <div class="form-row">
         <input id="racl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="racl-role" placeholder="role (e.g. user)">
-        <button class="btn btn-sm btn-primary" onclick="addRoleAcl()" data-i18n="act.add">Add</button>
+        <button class="btn btn-sm" onclick="addRoleAcl()" data-i18n="act.add">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.domain">Domain</th><th data-i18n="th.role">Role</th><th data-i18n="th.enabled">Enabled</th><th></th></tr></thead>
@@ -155,7 +155,7 @@
       <div class="form-row">
         <input id="preset-email" placeholder="email (e.g. friend@gmail.com)">
         <input id="preset-role" placeholder="role (e.g. friend)">
-        <button class="btn btn-sm btn-primary" onclick="addPreset()" data-i18n="act.add">Add</button>
+        <button class="btn btn-sm" onclick="addPreset()" data-i18n="act.add">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.email">Email</th><th data-i18n="th.role">Role</th><th></th></tr></thead>
@@ -180,7 +180,7 @@
       <div class="form-row">
         <input id="acl-domain" placeholder="domain (e.g. *.kazusa.feng.moe)">
         <input id="acl-email" placeholder="email (e.g. *@feng.moe)">
-        <button class="btn btn-sm btn-primary" onclick="addAcl()" data-i18n="act.add">Add</button>
+        <button class="btn btn-sm" onclick="addAcl()" data-i18n="act.add">Add</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.domain">Domain</th><th data-i18n="th.email">Email</th><th data-i18n="th.enabled">Enabled</th><th></th></tr></thead>
@@ -195,7 +195,7 @@
       <div class="form-row">
         <input id="ann-message" data-i18n-ph="ann.ph" placeholder="公告内容">
         <select id="ann-level"><option value="info" data-i18n="ann.level.info">信息</option><option value="warn" data-i18n="ann.level.warn">警告</option><option value="error" data-i18n="ann.level.error">紧急</option></select>
-        <button class="btn btn-sm btn-primary" onclick="addAnnouncement()" data-i18n="ann.publish">发布</button>
+        <button class="btn btn-sm" onclick="addAnnouncement()" data-i18n="ann.publish">发布</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.content">内容</th><th data-i18n="th.level">级别</th><th data-i18n="th.status">状态</th><th data-i18n="th.time">时间</th><th></th></tr></thead>
@@ -220,7 +220,7 @@
         <input id="ms-host" data-i18n-ph="ms.host.ph" placeholder="host (e.g. dsh.kazusa.feng.moe)">
         <input id="ms-icon" data-i18n-ph="ms.icon.ph" placeholder="图标 (emoji)" value="📁">
         <input id="ms-category" data-i18n-ph="ms.category.ph" placeholder="分类">
-        <button class="btn btn-sm btn-primary" onclick="addManualService()" data-i18n="ms.add">添加</button>
+        <button class="btn btn-sm" onclick="addManualService()" data-i18n="ms.add">添加</button>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th data-i18n="th.title">标题</th><th data-i18n="th.host">Host</th><th data-i18n="th.category">分类</th><th data-i18n="th.sort">排序</th><th data-i18n="th.enabled">启用</th><th></th></tr></thead>
@@ -305,7 +305,7 @@ async function loadRoleAcl() {
       <td><code>${esc(r.domain)}</code></td>
       <td><span class="badge badge-${r.role === 'admin' ? 'admin' : r.role === 'user' ? 'user' : 'custom'}">${esc(r.role)}</span></td>
       <td class="toggle" onclick="toggleRoleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="delRoleAcl(${r.id})">${t('act.delete')}</button></td>
+      <td><button class="btn btn-sm btn-destructive" onclick="delRoleAcl(${r.id})">${t('act.delete')}</button></td>
     </tr>
   `).join('');
   refreshIcons();
@@ -340,9 +340,9 @@ async function loadPresets() {
         <span class="badge ${badgeCls}" id="preset-badge-${p.id}">${esc(p.role)}</span>
         <input class="role-input" id="preset-input-${p.id}" value="${esc(p.role)}" style="display:none" onkeydown="if(event.key==='Enter')savePreset(${p.id})">
         <button class="btn btn-sm btn-outline" id="preset-edit-btn-${p.id}" onclick="editPreset(${p.id})">${t('act.edit')}</button>
-        <button class="btn btn-sm btn-primary" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">${t('act.save')}</button>
+        <button class="btn btn-sm" id="preset-save-btn-${p.id}" style="display:none" onclick="savePreset(${p.id})">${t('act.save')}</button>
       </td>
-      <td><button class="btn btn-sm btn-danger" onclick="delPreset(${p.id},'${esc(p.email)}')">${t('act.delete')}</button></td>
+      <td><button class="btn btn-sm btn-destructive" onclick="delPreset(${p.id},'${esc(p.email)}')">${t('act.delete')}</button></td>
     </tr>`;
   }).join('');
 }
@@ -388,10 +388,10 @@ async function loadUsers() {
         <span class="badge ${badgeCls}" id="role-badge-${u.id}">${esc(u.role)}</span>
         <input class="role-input" id="role-input-${u.id}" value="${esc(u.role)}" style="display:none" onkeydown="if(event.key==='Enter')saveRole(${u.id})">
         <button class="btn btn-sm btn-outline" id="role-edit-btn-${u.id}" onclick="editRole(${u.id})">${t('act.edit')}</button>
-        <button class="btn btn-sm btn-primary" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">${t('act.save')}</button>
+        <button class="btn btn-sm" id="role-save-btn-${u.id}" style="display:none" onclick="saveRole(${u.id})">${t('act.save')}</button>
       </td>
       <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="delUser(${u.id},'${esc(u.email)}')">${t('act.delete')}</button></td>
+      <td><button class="btn btn-sm btn-destructive" onclick="delUser(${u.id},'${esc(u.email)}')">${t('act.delete')}</button></td>
     </tr>`;
   }).join('');
 }
@@ -424,7 +424,7 @@ async function loadAcl() {
     <td>${esc(r.domain)}</td>
     <td>${esc(r.email)}</td>
     <td class="toggle" onclick="toggleAcl(${r.id},${!r.enabled})">${r.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
-    <td><button class="btn btn-sm btn-danger" onclick="delAcl(${r.id})">${t('act.delete')}</button></td>
+    <td><button class="btn btn-sm btn-destructive" onclick="delAcl(${r.id})">${t('act.delete')}</button></td>
   </tr>`).join('');
   refreshIcons();
 }
@@ -456,7 +456,7 @@ async function loadAnnouncements() {
     <td><span class="badge badge-${a.level === 'error' ? 'admin' : a.level === 'warn' ? 'custom' : 'user'}">${levelLabel[a.level] || a.level}</span></td>
     <td class="toggle" onclick="toggleAnnouncement(${a.id},${!a.active})">${a.active ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
     <td class="audit-time">${new Date(a.created_at).toLocaleString()}</td>
-    <td><button class="btn btn-sm btn-danger" onclick="delAnnouncement(${a.id})">${t('act.delete')}</button></td>
+    <td><button class="btn btn-sm btn-destructive" onclick="delAnnouncement(${a.id})">${t('act.delete')}</button></td>
   </tr>`).join('');
   refreshIcons();
 }
@@ -567,7 +567,7 @@ async function loadManualServices() {
     <td>${esc(s.category) || '—'}</td>
     <td>${esc(String(s.order ?? 100))}</td>
     <td class="toggle" onclick="toggleManualService(${s.id},${!s.enabled})">${s.enabled ? icon('circle-check-big', 'toggle-icon', t('ui.enabledYes')) : icon('circle', 'toggle-icon', t('ui.enabledNo'))}</td>
-    <td><button class="btn btn-sm btn-danger" onclick="delManualService(${s.id})">${t('act.delete')}</button></td>
+    <td><button class="btn btn-sm btn-destructive" onclick="delManualService(${s.id})">${t('act.delete')}</button></td>
   </tr>`).join('');
   refreshIcons();
 }

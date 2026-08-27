@@ -134,7 +134,7 @@
     </div>
 
     <div class="create-area">
-      <button class="btn btn-primary" onclick="openCreate()"><i data-lucide="plus" aria-hidden="true"></i> <span data-i18n="tok.createBtn">创建新 Token</span></button>
+      <button class="btn" onclick="openCreate()"><i data-lucide="plus" aria-hidden="true"></i> <span data-i18n="tok.createBtn">创建新 Token</span></button>
     </div>
 
     <details class="help-section" id="help-section">
@@ -164,7 +164,7 @@
 
       <div class="btn-row">
         <button class="btn btn-outline" onclick="closeCreate()" data-i18n="tok.cancel">取消</button>
-        <button class="btn btn-primary" id="create-btn" onclick="doCreate()" data-i18n="tok.create">创建</button>
+        <button class="btn" id="create-btn" onclick="doCreate()" data-i18n="tok.create">创建</button>
       </div>
       <div class="msg" id="create-msg"></div>
     </div>
@@ -175,7 +175,7 @@
       <h2><i data-lucide="circle-check-big" aria-hidden="true"></i> <span data-i18n="tok.createdTitle">Token 已创建</span></h2>
       <div class="token-warn" data-i18n="tok.oneTimeWarn"><i data-lucide="triangle-alert" aria-hidden="true"></i> 这是你唯一一次看到此 Token，关闭后将无法再次查看。请立即复制并妥善保管！</div>
       <div class="token-value" id="revealed-token"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="copyToken()"><i data-lucide="clipboard" aria-hidden="true"></i> <span data-i18n="tok.copy">复制 Token</span></button>
+      <button class="btn" style="width:100%" onclick="copyToken()"><i data-lucide="clipboard" aria-hidden="true"></i> <span data-i18n="tok.copy">复制 Token</span></button>
       <div class="copied-msg" id="copied-msg"><i data-lucide="circle-check-big" aria-hidden="true"></i> <span data-i18n="tok.copied">已复制到剪贴板</span></div>
       <div class="btn-row" style="margin-top:12px">
         <button class="btn btn-outline" style="width:100%" onclick="closeReveal()" data-i18n="tok.close">关闭</button>
@@ -191,7 +191,7 @@
       </p>
       <div class="btn-row">
         <button class="btn btn-outline" onclick="closeRevoke()" data-i18n="tok.cancel">取消</button>
-        <button class="btn btn-danger" id="revoke-btn" onclick="doRevoke()" data-i18n="tok.revokeConfirm">确认撤销</button>
+        <button class="btn btn-destructive" id="revoke-btn" onclick="doRevoke()" data-i18n="tok.revokeConfirm">确认撤销</button>
       </div>
       <div class="msg" id="revoke-msg"></div>
     </div>
@@ -206,7 +206,7 @@
       const bodies = {
         'zh-CN': `<p>创建的 Token 可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程序化访问所有经过 Traefik <code>kazusa-auth@docker</code> 认证的 <code>*.kazusa.feng.moe</code> 服务。</p>
         <p><strong>基本用法</strong></p>
-        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+        <pre><code>curl -H"Authorization: Bearer hp_xxx...xxxx" \\
   https://kazusa.feng.moe/api/me</code></pre>
         <p><strong>可用端点示例</strong></p>
         <ul><li><code>GET /api/me</code> — 获取当前登录用户信息</li><li><code>GET /api/services</code> — 列出所有服务及访问权限</li><li><code>GET /auth/tokens</code> — 管理自己的 Token</li></ul>
@@ -217,7 +217,7 @@
         <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> 小提示：在脚本或 CI 中使用时，建议将 Token 存入环境变量，避免硬编码。</div>`,
         'zh-TW': `<p>建立的權杖可以以 <code>Authorization: Bearer &lt;token&gt;</code> 的形式，程式化存取所有經過 Traefik <code>kazusa-auth@docker</code> 認證的 <code>*.kazusa.feng.moe</code> 服務。</p>
         <p><strong>基本用法</strong></p>
-        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+        <pre><code>curl -H"Authorization: Bearer hp_xxx...xxxx" \\
   https://kazusa.feng.moe/api/me</code></pre>
         <p><strong>可用端點範例</strong></p>
         <ul><li><code>GET /api/me</code> — 取得目前登入者資訊</li><li><code>GET /api/services</code> — 列出所有服務及存取權限</li><li><code>GET /auth/tokens</code> — 管理自己的權杖</li></ul>
@@ -228,7 +228,7 @@
         <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> 小提示：在腳本或 CI 中使用時，建議將權杖存入環境變數，避免硬編碼。</div>`,
         'en-US': `<p>Tokens grant programmatic access to all <code>*.kazusa.feng.moe</code> services behind Traefik <code>kazusa-auth@docker</code> via <code>Authorization: Bearer &lt;token&gt;</code>.</p>
         <p><strong>Basic usage</strong></p>
-        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+        <pre><code>curl -H"Authorization: Bearer hp_xxx...xxxx" \\
   https://kazusa.feng.moe/api/me</code></pre>
         <p><strong>Example endpoints</strong></p>
         <ul><li><code>GET /api/me</code> — current user info</li><li><code>GET /api/services</code> — list services and access</li><li><code>GET /auth/tokens</code> — manage your tokens</li></ul>
@@ -239,7 +239,7 @@
         <div class="help-tip"><i data-lucide="lightbulb" aria-hidden="true"></i> Tip: store tokens in environment variables in scripts/CI instead of hardcoding.</div>`,
         'ja': `<p>トークンは <code>Authorization: Bearer &lt;token&gt;</code> 形式で、Traefik <code>kazusa-auth@docker</code> 認証を通過するすべての <code>*.kazusa.feng.moe</code> サービスへプログラムからアクセスできます。</p>
         <p><strong>基本的な使い方</strong></p>
-        <pre><code>curl -H "Authorization: Bearer hp_xxx...xxxx" \\
+        <pre><code>curl -H"Authorization: Bearer hp_xxx...xxxx" \\
   https://kazusa.feng.moe/api/me</code></pre>
         <p><strong>エンドポイント例</strong></p>
         <ul><li><code>GET /api/me</code> — 現在のユーザー情報を取得</li><li><code>GET /api/services</code> — サービスとアクセス権の一覧</li><li><code>GET /auth/tokens</code> — トークンの管理</li></ul>
@@ -304,7 +304,7 @@
               <div class="card-title"><code style="font-size:13px">${esc(t.prefix)}…</code> ${badge}</div>
               <div class="card-meta">${t('tok.createdAt')} ${created}</div>
             </div>
-            ${!t.revoked ? `<button class="btn btn-danger-outline btn-sm" onclick="openRevoke(${t.id})">${t('tok.revoke')}</button>` : ''}
+            ${!t.revoked ? `<button class="btn btn-outline-destructive btn-sm" onclick="openRevoke(${t.id})">${t('tok.revoke')}</button>` : ''}
           </div>
           <div class="card-desc">${desc}</div>
           <div class="card-meta">

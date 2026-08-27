@@ -287,29 +287,29 @@
         return;
       }
 
-      el.innerHTML = tokens.map(t => {
-        const expired = t.expires_at && new Date(t.expires_at) < new Date();
-        const badge = t.revoked ? `<span class="badge badge-revoked">${t('tok.badgeRevoked')}</span>`
+      el.innerHTML = tokens.map(tok => {
+        const expired = tok.expires_at && new Date(tok.expires_at) < new Date();
+        const badge = tok.revoked ? `<span class="badge badge-revoked">${t('tok.badgeRevoked')}</span>`
                      : expired ? `<span class="badge badge-expired">${t('tok.badgeExpired')}</span>`
                      : `<span class="badge badge-active">${t('tok.badgeActive')}</span>`;
 
-        const desc = t.description || `<span style="color:var(--text-subtle)">${t('tok.noDesc')}</span>`;
-        const created = t.created_at ? new Date(t.created_at).toLocaleString(currentLocale()) : '';
-        const lastUsed = t.last_used_at ? new Date(t.last_used_at).toLocaleString(currentLocale()) : t('tok.neverUsed');
-        const expiresStr = t.expires_at ? new Date(t.expires_at).toLocaleString(currentLocale()) : t('tok.forever');
+        const desc = tok.description || `<span style="color:var(--text-subtle)">${t('tok.noDesc')}</span>`;
+        const created = tok.created_at ? new Date(tok.created_at).toLocaleString(currentLocale()) : '';
+        const lastUsed = tok.last_used_at ? new Date(tok.last_used_at).toLocaleString(currentLocale()) : t('tok.neverUsed');
+        const expiresStr = tok.expires_at ? new Date(tok.expires_at).toLocaleString(currentLocale()) : t('tok.forever');
 
         return `<div class="card">
           <div class="card-header">
             <div>
-              <div class="card-title"><code style="font-size:13px">${esc(t.prefix)}…</code> ${badge}</div>
+              <div class="card-title"><code style="font-size:13px">${esc(tok.prefix)}…</code> ${badge}</div>
               <div class="card-meta">${t('tok.createdAt')} ${created}</div>
             </div>
-            ${!t.revoked ? `<button class="btn btn-outline-destructive btn-sm" onclick="openRevoke(${t.id})">${t('tok.revoke')}</button>` : ''}
+            ${!tok.revoked ? `<button class="btn btn-outline-destructive btn-sm" onclick="openRevoke(${tok.id})">${t('tok.revoke')}</button>` : ''}
           </div>
           <div class="card-desc">${desc}</div>
           <div class="card-meta">
             ${t('tok.expires')}：${expiresStr} &middot; ${t('tok.lastUsed')}：${lastUsed}
-            ${t.user_email ? '&middot; ' + esc(t.user_email) : ''}
+            ${tok.user_email ? '&middot; ' + esc(tok.user_email) : ''}
           </div>
         </div>`;
       }).join('');

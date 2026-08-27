@@ -2,78 +2,122 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0a0a0a">
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/common.css?v=tokens-v1">
   <title>Kazusa Home</title>
   <style>
-    body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    body {
+      min-height: 100dvh; display: flex; flex-direction: column;
+      padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+    }
     header {
-      padding: 48px 24px 8px; text-align: center;
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      max-width: 1060px; width: 100%; margin: 0 auto;
+      padding: 40px 24px 8px;
     }
-    header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
-    header p { color: var(--text-muted); font-size: 13px; }
-    .user-bar { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
-    .user-bar img { width: 24px; height: 24px; border-radius: 50%; }
-    .user-bar span { font-size: 13px; color: var(--text-muted); }
-    .user-bar a, .user-bar .bar-btn { font-size: 12px; color: var(--text-subtle); text-decoration: none; cursor: pointer; background: none; border: none; padding: 0; display: inline-flex; align-items: center; gap: 4px; }
-    .user-bar a:hover, .user-bar .bar-btn:hover { color: var(--text); }
+    .header-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+    .header-main h1 {
+      font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2;
+    }
+    .header-main p { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
 
-    /* Announcement banner */
-    .announcement {
-      width: 100%; max-width: 960px; margin: 0 24px; padding: 10px 16px;
-      border-radius: 8px; font-size: 13px; line-height: 1.5;
-      display: none; align-items: center; gap: 8px;
-    }
-    .announcement.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-    .announcement.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-    .announcement.error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme]) .announcement.info { background: #172554; color: #93c5fd; border-color: #1e3a5f; }
-      :root:not([data-theme]) .announcement.warn { background: #451a03; color: #fbbf24; border-color: #78350f; }
-      :root:not([data-theme]) .announcement.error { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
-    }
-    :root[data-theme="dark"] .announcement.info { background: #172554; color: #93c5fd; border-color: #1e3a5f; }
-    :root[data-theme="dark"] .announcement.warn { background: #451a03; color: #fbbf24; border-color: #78350f; }
-    :root[data-theme="dark"] .announcement.error { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
-    .announcement .dismiss { margin-left: auto; cursor: pointer; opacity: .6; font-size: 16px; }
-
-    .grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 12px; padding: 24px; width: 100%; max-width: 960px;
-    }
-    .card {
-      display: flex; align-items: flex-start; gap: 14px; padding: 16px;
+    /* Account chip */
+    .user-bar { position: relative; }
+    .account-chip {
+      display: inline-flex; align-items: center; gap: 10px;
       background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: var(--radius); box-shadow: var(--shadow);
-      text-decoration: none; color: inherit;
-      transition: background .15s, border-color .15s; position: relative;
+      border-radius: 999px; padding: 6px 14px 6px 6px;
+      box-shadow: var(--shadow-1);
+      font-size: 13px; cursor: pointer; user-select: none;
+      transition: box-shadow var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
     }
-    .card:hover { background: var(--hover-bg); border-color: #d4d4d4; }
-    @media (prefers-color-scheme: dark) { :root:not([data-theme]) .card:hover { border-color: #404040; } }
-    :root[data-theme="dark"] .card:hover { border-color: #404040; }
-    .card .icon { font-size: 28px; line-height: 1; flex-shrink: 0; width: 36px; text-align: center; }
-    .card .meta { flex: 1; min-width: 0; }
-    .card .meta h3 { font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .card .meta p { font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
-    .status-running { background: var(--success); }
-    .status-exited { background: var(--danger); }
-    .status-restarting { background: var(--warning); animation: pulse 1.5s ease-in-out infinite; }
-    .status-unhealthy { background: var(--warning); }
-    .status-created { background: var(--primary); }
-    .status-paused { background: var(--text-subtle); }
-    .status-other { background: var(--text-subtle); }
-    @keyframes pulse { 50% { opacity: .4; } }
-    .empty { text-align: center; color: var(--text-subtle); font-size: 14px; padding: 64px 24px; }
-    footer { margin-top: auto; padding: 24px; font-size: 11px; color: var(--text-subtle); }
+    .account-chip:hover { box-shadow: var(--shadow-2); }
+    .account-chip img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+    .account-chip .chip-name { color: var(--text); line-height: 1.2; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 
-    .card .badge { position: absolute; top: 8px; right: 8px; font-size: 10px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; font-weight: 500; }
-    .badge-health-healthy { background: var(--success); color: #fff; }
-    .badge-health-unhealthy { background: var(--danger); color: #fff; }
-    .badge-health-unknown { background: var(--text-subtle); color: #fff; }
+    .account-menu {
+      position: absolute; top: calc(100% + 8px); right: 0; min-width: 180px;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-2); padding: 6px; z-index: 50;
+      opacity: 0; transform: translateY(-4px); pointer-events: none;
+      transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out);
+    }
+    .account-menu.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .account-menu button, .account-menu a {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+      padding: 8px 10px; border: none; background: none; cursor: pointer;
+      font-size: 13px; color: var(--text); text-decoration: none; text-align: left;
+      border-radius: 6px; font-family: inherit;
+      transition: background var(--dur-fast) var(--ease-out);
+    }
+    .account-menu button:hover, .account-menu a:hover { background: var(--hover-bg); }
+    .account-menu .lucide-icon { color: var(--text-muted); }
+
+    /* Unauthenticated actions */
+    .auth-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    /* Announcement banner (token-based styles come from common.css) */
+    #announcements {
+      max-width: 1060px; width: 100%; margin: 12px auto 0; padding: 0 24px;
+      display: none; flex-direction: column; gap: 8px;
+    }
+
+    .grid-wrap { max-width: 1060px; width: 100%; margin: 0 auto; padding: 28px 24px 48px; }
+    .grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px; width: 100%;
+    }
+    .group-title {
+      grid-column: 1 / -1; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-subtle); margin-top: 16px;
+    }
+    .group-title:first-child { margin-top: 0; }
+
+    .card {
+      display: flex; align-items: center; gap: 14px; padding: 16px;
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
+      text-decoration: none; color: inherit;
+      position: relative;
+      transition: transform var(--dur-med) var(--ease-out),
+                  box-shadow var(--dur-med) var(--ease-out),
+                  border-color var(--dur-med) var(--ease-out),
+                  opacity var(--dur-med) var(--ease-out);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-2);
+        border-color: var(--text-subtle);
+      }
+    }
+    .card:active { transform: translateY(0) scale(0.99); }
+    .icon-tile {
+      width: 44px; height: 44px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; line-height: 1; border-radius: var(--radius-sm);
+      background: var(--hover-bg); border: 1px solid var(--border);
+    }
+    .meta { flex: 1; min-width: 0; }
+    .meta h3 { font-size: 14px; font-weight: 600; line-height: 1.3; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .meta p { font-size: 12px; color: var(--text-muted); line-height: 1.45; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+      margin-left: auto;
+    }
+    .status-running { background: var(--success); color: var(--success); }
+    .status-exited { background: var(--danger); color: var(--danger); }
+    .status-restarting { background: var(--warning); color: var(--warning); animation: pulse 1.5s ease-in-out infinite; }
+    .status-unhealthy { background: var(--warning); color: var(--warning); }
+    .status-created { background: var(--primary); color: var(--primary); }
+    .status-paused, .status-other { background: var(--text-subtle); color: var(--text-subtle); }
+    @keyframes pulse { 50% { opacity: .5; } }
+    .card-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; font-weight: 500; }
+    .empty { grid-column: 1 / -1; text-align: center; color: var(--text-subtle); font-size: 14px; padding: 64px 24px; }
+    footer { margin-top: auto; padding: 24px; font-size: 11px; color: var(--text-subtle); text-align: center; }
 
     /* QR overlay (shared for show-QR and scan-QR) */
     .qr-overlay {
@@ -81,11 +125,12 @@
       background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
       align-items: center; justify-content: center; padding: 24px;
     }
-    .qr-overlay.active { display: flex; }
+    .qr-overlay.active { display: flex; animation: overlay-in var(--dur-fast) var(--ease-out); }
     .qr-modal {
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
       padding: 32px; text-align: center; max-width: 360px; width: 100%;
-      box-shadow: var(--shadow); position: relative;
+      box-shadow: var(--shadow-2); position: relative;
+      animation: modal-in var(--dur-med) var(--ease-out);
     }
     .qr-modal h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
     .qr-modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
@@ -101,10 +146,12 @@
       font-size: 18px; color: var(--text-muted); cursor: pointer; padding: 4px;
     }
     .qr-close:hover { color: var(--text); }
+    @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes modal-in { from { opacity: 0; transform: scale(.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
     /* Scanner modal */
     #scanner-video {
-      width: 100%; max-width: 300px; border-radius: 8px;
+      width: 100%; max-width: 300px; border-radius: var(--radius-sm);
       background: #000; aspect-ratio: 1;
     }
     #scanner-status { font-size: 13px; color: var(--text-muted); margin-top: 12px; min-height: 20px; }
@@ -114,21 +161,40 @@
     /* Skeleton loading */
     .skeleton { background: var(--border); border-radius: 4px; animation: shimmer 1.5s ease-in-out infinite; }
     @keyframes shimmer { 0%,100% { opacity: .4; } 50% { opacity: .8; } }
-    .skeleton-card { height: 72px; border-radius: var(--radius); }
+    .skeleton-card { height: 76px; border-radius: var(--radius-lg); }
+
+    /* Card entrance reveal */
+    .reveal { animation: card-in 500ms var(--ease-out) backwards; }
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 640px) {
+      header { padding: 28px 20px 8px; }
+      .grid-wrap { padding: 20px 20px 40px; }
+      .header-row { flex-direction: column; align-items: flex-start; }
+      .auth-actions { justify-content: flex-start; }
+    }
   </style>
 </head>
 <body>
 <header>
-  <h1>Kazusa Home</h1>
-  <p id="subtitle">loading…</p>
-  <div id="user-bar" class="user-bar" style="display:none"></div>
+  <div class="header-row">
+    <div class="header-main">
+      <h1>Kazusa Home</h1>
+      <p id="subtitle">loading…</p>
+    </div>
+    <div id="user-bar" class="user-bar" style="display:none"></div>
+  </div>
 </header>
 <div id="announcements"></div>
-<div class="grid" id="grid">
-  <div class="skeleton skeleton-card"></div>
-  <div class="skeleton skeleton-card"></div>
-  <div class="skeleton skeleton-card"></div>
-  <div class="skeleton skeleton-card"></div>
+<div class="grid-wrap">
+  <div class="grid" id="grid">
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+    <div class="skeleton skeleton-card"></div>
+  </div>
 </div>
 <footer>kazusa home portal</footer>
 
@@ -164,7 +230,6 @@ const subtitle = document.getElementById('subtitle');
 const userBar = document.getElementById('user-bar');
 const annDiv = document.getElementById('announcements');
 
-const SCAN_ICON = () => icon('scan-line');
 let isAuthenticated = false;
 
 async function loadUser() {
@@ -174,18 +239,8 @@ async function loadUser() {
       const u = await r.json();
       if (u.authenticated) {
         window.csrfToken = u.csrf || '';
-        userBar.style.display = 'flex';
-        userBar.innerHTML = `
-          ${u.picture ? `<img src="${esc(u.picture)}" alt="">` : ''}
-          <span>${esc(u.name || u.email)}</span>
-          ${u.role === 'admin' ? '<a href="/admin">admin</a>' : ''}
-          <a href="/account/tokens">tokens</a>
-          <a href="/account/sessions">设备</a>
-          <button class="bar-btn" onclick="openScanQR()">${SCAN_ICON()} 扫码</button>
-          <a href="/auth/logout">logout</a>
-        `;
-        refreshIcons();
         isAuthenticated = true;
+        renderAccountChip(u);
         loadServices();
         return;
       }
@@ -193,17 +248,48 @@ async function loadUser() {
   } catch {}
   // Unauthenticated
   isAuthenticated = false;
-  userBar.style.display = 'flex';
-  userBar.innerHTML = `<button class="btn btn-outline" onclick="location.href='/auth/login'">
-    <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-    使用 Google 登录
-  </button>
-  <button class="btn btn-outline" onclick="openShowQR()">
-    ${SCAN_ICON()}
-    扫码登录
-  </button>`;
+  userBar.style.display = 'block';
+  userBar.innerHTML = `<div class="auth-actions">
+    <form action="/auth/login" method="GET">
+      <button class="btn btn-outline" type="submit">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        使用 Google 登录
+      </button>
+    </form>
+    <button class="btn btn-outline" onclick="openShowQR()">
+      ${icon('scan-line')}
+      扫码登录
+    </button>
+  </div>`;
   refreshIcons();
   loadServices();
+}
+
+function renderAccountChip(u) {
+  userBar.style.display = 'block';
+  userBar.innerHTML = `
+    <div class="account-chip" id="account-chip">
+      ${u.picture ? `<img src="${esc(u.picture)}" alt="">` : ''}
+      <span class="chip-name">${esc(u.name || u.email)}</span>
+      ${icon('chevron-down', '', '')}
+    </div>
+    <div class="account-menu" id="account-menu">
+      ${u.role === 'admin' ? `<a href="/admin">${icon('shield')} 管理后台</a>` : ''}
+      <a href="/account/tokens">${icon('key-round')} API Tokens</a>
+      <a href="/account/sessions">${icon('monitor-smartphone')} 设备管理</a>
+      <button type="button" onclick="openScanQR()">${icon('scan-line')} 扫码授权</button>
+      <a href="/auth/logout">${icon('log-out')} 退出登录</a>
+    </div>`;
+  refreshIcons();
+
+  const chip = document.getElementById('account-chip');
+  const menu = document.getElementById('account-menu');
+  chip.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => menu.classList.remove('open'));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') menu.classList.remove('open'); });
 }
 
 function statusClass(s) {
@@ -216,6 +302,62 @@ function statusClass(s) {
   return 'other';
 }
 
+function groupLabel(c) {
+  if (!c || !String(c).trim()) return '默认分组';
+  return String(c).trim();
+}
+
+function renderServices(services) {
+  subtitle.textContent = `${services.length} 个服务`;
+  if (!services.length) { grid.innerHTML = '<div class="empty">暂无服务</div>'; return; }
+  // Group by category preserving first-appearance order
+  const groups = new Map();
+  services.forEach((s) => {
+    const key = groupLabel(s.category);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(s);
+  });
+  let i = 0;
+  grid.innerHTML = [...groups.entries()].map(([cat, items]) => `
+    <div class="group-title">${esc(cat)} · ${items.length}</div>
+    ${items.map(s => {
+      let badge = '';
+      if (s.health && s.health.status === 'unhealthy') {
+        badge = '<span class="badge badge-health-unhealthy card-badge" title="' + esc(s.health.detail || '') + '">访问异常</span>';
+      } else if (s.health && s.health.status === 'unknown') {
+        badge = '<span class="badge badge-health-unknown card-badge">未检测</span>';
+      }
+      const delay = Math.min(i++ * 35, 350);
+      return `
+        <a class="card reveal" style="animation-delay:${delay}ms" href="${esc(s.url)}" target="_blank" rel="noopener"
+           ${!s.url ? 'style="pointer-events:none;opacity:.5"' : ''}>
+          ${badge}
+          <div class="icon-tile">${esc(s.icon)}</div>
+          <div class="meta"><h3>${esc(s.title)}</h3>${s.description ? `<p>${esc(s.description)}</p>` : ''}</div>
+          <div class="status-dot status-${statusClass(s.status)}" title="${esc(s.status)}"></div>
+        </a>
+      `;
+    }).join('')}
+  `).join('');
+}
+
+async function loadServices() {
+  if (!isAuthenticated) {
+    subtitle.textContent = '请先登录';
+    grid.innerHTML = `
+      <div class="empty">
+        <p style="margin-bottom:16px;color:var(--text-muted);">登录后即可查看应用列表</p>
+        <button class="btn btn-primary" onclick="location.href='/auth/login'">使用 Google 登录</button>
+      </div>`;
+    return;
+  }
+  try {
+    const res = await fetch('/api/services');
+    if (!res.ok) throw new Error();
+    renderServices(await res.json());
+  } catch { subtitle.textContent = '加载失败'; }
+}
+
 async function loadAnnouncements() {
   try {
     const r = await fetch('/api/announcements');
@@ -223,11 +365,8 @@ async function loadAnnouncements() {
     const items = await r.json();
     if (!items.length) { annDiv.style.display = 'none'; return; }
     annDiv.style.display = 'flex';
-    annDiv.style.flexDirection = 'column';
-    annDiv.style.gap = '8px';
-    annDiv.style.marginBottom = '8px';
     annDiv.innerHTML = items.map(a => `
-      <div class="announcement ${a.level}" style="display:flex">
+      <div class="announcement ${esc(a.level)}" style="display:flex">
         <span>${esc(a.message)}</span>
         <button class="dismiss" onclick="dismissAnnouncement(${a.id}, this)" aria-label="关闭公告">${icon('x')}</button>
       </div>
@@ -238,43 +377,6 @@ async function loadAnnouncements() {
 
 function dismissAnnouncement(id, el) {
   el.closest('.announcement').style.display = 'none';
-}
-
-async function loadServices() {
-  if (!isAuthenticated) {
-    subtitle.textContent = '请先登录';
-    grid.innerHTML = `
-      <div class="empty" style="text-align:center;padding:40px 20px;">
-        <p style="margin-bottom:16px;color:var(--text-muted);">登录后即可查看应用列表</p>
-        <button class="btn btn-primary" onclick="location.href='/auth/login'">使用 Google 登录</button>
-      </div>
-    `;
-    return;
-  }
-  try {
-    const res = await fetch('/api/services');
-    if (!res.ok) throw new Error();
-    const services = await res.json();
-    subtitle.textContent = `${services.length} 个服务`;
-    if (!services.length) { grid.innerHTML = '<div class="empty">暂无服务</div>'; return; }
-    grid.innerHTML = services.map(s => {
-      let badge = '';
-      if (s.health && s.health.status === 'unhealthy') {
-        badge = '<span class="badge badge-health-unhealthy" title="' + esc(s.health.detail || '') + '">访问异常</span>';
-      } else if (s.health && s.health.status === 'unknown') {
-        badge = '<span class="badge badge-health-unknown">未检测</span>';
-      }
-      return `
-        <a class="card" href="${esc(s.url)}" target="_blank" rel="noopener"
-           ${!s.url ? 'style="pointer-events:none;opacity:.5"' : ''}>
-          ${badge}
-          <div class="icon">${esc(s.icon)}</div>
-          <div class="meta"><h3>${esc(s.title)}</h3>${s.description ? `<p>${esc(s.description)}</p>` : ''}</div>
-          <div class="status-dot status-${statusClass(s.status)}" title="${esc(s.status)}"></div>
-        </a>
-      `;
-    }).join('');
-  } catch { subtitle.textContent = '加载失败'; }
 }
 
 loadUser();

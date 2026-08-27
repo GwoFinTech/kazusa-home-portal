@@ -692,14 +692,14 @@ async def qr_confirm_page(request: Request):
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0a0a0a">
-  <link rel="stylesheet" href="/common.css">
+  <link rel="stylesheet" href="/common.css?v=tokens-v1">
   <title>扫码确认 — kazusa</title>
   <style>
     body {{ min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }}
     .confirm-card {{
       background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
       padding: 40px 32px; text-align: center; max-width: 380px; width: 100%;
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-1);
     }}
     .confirm-card h1 {{ font-size: 20px; font-weight: 600; margin-bottom: 6px; }}
     .confirm-card p {{ font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }}

@@ -1,5 +1,5 @@
-const CACHE = 'kazusa-v2';
-const PRECACHE = ['/', '/common.css', '/common.js?v=lucide-v1', '/manifest.json'];
+const CACHE = 'kazusa-v3';
+const PRECACHE = ['/', '/common.css?v=tokens-v1', '/common.js?v=lucide-v1', '/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)));

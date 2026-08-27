@@ -17,9 +17,10 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
-from .auth import router as auth_router, _get_current_user, _check_acl, _csrf_token, _require_admin, limiter as auth_limiter
+from .auth import router as auth_router, _get_current_user, _check_acl, _csrf_token, _require_admin, _log_audit, limiter as auth_limiter
 from .db import init_pool, close_pool, db_cursor, run_migrations
 from . import config
+from . import schemas
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -51,6 +52,40 @@ def _extract_host_from_traefik(labels: dict) -> Optional[str]:
     return None
 
 
+def _fetch_manual_services() -> list[ServiceEntry]:
+    """Read software-registered services that serve a Traefik file-provider route."""
+    try:
+        with db_cursor() as cur:
+            cur.execute(
+                'SELECT title, description, icon, url, host, category, sort_order AS "order" '
+                'FROM home_manual_services WHERE enabled = TRUE '
+                'ORDER BY sort_order ASC, title ASC'
+            )
+            rows = [dict(r) for r in cur.fetchall()]
+    except Exception as e:
+        logger.warning("Manual services read failed: %s", e)
+        return []
+
+    entries: list[ServiceEntry] = []
+    for r in rows:
+        host = r.get("host") or ""
+        url = r.get("url") or ""
+        if not url and host:
+            url = f"https://{host}"
+        entries.append(ServiceEntry(
+            name=host or url or r.get("title", "manual"),
+            title=r.get("title") or "Untitled",
+            description=r.get("description") or "",
+            icon=r.get("icon") or "\U0001f310",
+            url=url,
+            host=host,
+            category=r.get("category") or "",
+            order=int(r.get("order") or 100),
+            status="manual",
+        ))
+    return entries
+
+
 def _fetch_services() -> list[ServiceEntry]:
     """Discover services from Docker API (expensive call)."""
     try:
@@ -80,6 +115,16 @@ def _fetch_services() -> list[ServiceEntry]:
             order=int(labels.get(f"{LABEL_PREFIX}.order", "100")),
             status=c.status,
         ))
+
+    # Merge software-registered services (Traefik file-provider routes). A Docker
+    # label-discovered service wins if it owns the same host.
+    seen_hosts = {s.host for s in services if s.host}
+    for manual in _fetch_manual_services():
+        if manual.host and manual.host in seen_hosts:
+            continue
+        services.append(manual)
+        if manual.host:
+            seen_hosts.add(manual.host)
 
     services.sort(key=lambda s: (s.order, s.title))
     return services
@@ -384,6 +429,99 @@ def admin_system_environment(request: Request):
         "tsummt": _tsummt_runtime_config(),
         "policy": {"hidden": "token、secret、password、private key 等敏感变量不会返回"},
     }, headers={"Cache-Control": "private, no-store"})
+
+
+# ── Admin: Manual Services ───────────────────────────────
+# Register Traefik file-provider routes (no Docker labels) so they appear in the
+# portal service list even without a labelled container.
+
+def _manual_service_dict(row: dict) -> dict:
+    d = dict(row)
+    if d.get("created_at"):
+        d["created_at"] = d["created_at"].isoformat()
+    return d
+
+
+@app.get("/api/admin/manual-services")
+def list_manual_services(request: Request):
+    if not _require_admin(request):
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute(
+            'SELECT id, title, description, icon, url, host, category, sort_order AS "order", enabled, created_at '
+            "FROM home_manual_services ORDER BY sort_order ASC, title ASC"
+        )
+        items = [_manual_service_dict(dict(r)) for r in cur.fetchall()]
+    return JSONResponse(content=items, headers={"Cache-Control": "private, no-store"})
+
+
+@app.post("/api/admin/manual-services")
+def create_manual_service(request: Request, body: schemas.ManualServiceCreate):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    title = body.title.strip()
+    if not title:
+        return JSONResponse({"error": "title required"}, status_code=400)
+    host = body.host.strip()
+    url = body.url.strip()
+    if not url and host:
+        url = f"https://{host}"
+    with db_cursor() as cur:
+        cur.execute(
+            'INSERT INTO home_manual_services (title, description, icon, url, host, category, sort_order) '
+            "VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id, created_at",
+            (title, body.description.strip(), body.icon.strip() or "📁", url, host,
+             body.category.strip(), int(body.order)),
+        )
+        row = cur.fetchone()
+    if row is None:
+        return JSONResponse({"error": "insert_failed"}, status_code=500)
+    _log_audit(admin["email"], "manual-service.create", str(row["id"]))
+    _svc_cache.invalidate()
+    return _manual_service_dict(dict(row))
+
+
+@app.put("/api/admin/manual-services/{svc_id}")
+def update_manual_service(request: Request, svc_id: int, body: schemas.ManualServiceUpdate):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    sets = []
+    params: list = []
+    for col, val in [
+        ("title", body.title),
+        ("description", body.description),
+        ("icon", body.icon),
+        ("url", body.url),
+        ("host", body.host),
+        ("category", body.category),
+        ("sort_order", body.order),
+        ("enabled", body.enabled),
+    ]:
+        if val is not None:
+            sets.append(f"{col} = %s")
+            params.append(val)
+    if not sets:
+        return JSONResponse({"error": "no fields"}, status_code=400)
+    params.append(svc_id)
+    with db_cursor() as cur:
+        cur.execute(f"UPDATE home_manual_services SET {', '.join(sets)} WHERE id = %s", params)
+    _log_audit(admin["email"], "manual-service.update", str(svc_id))
+    _svc_cache.invalidate()
+    return {"id": svc_id, "ok": True}
+
+
+@app.delete("/api/admin/manual-services/{svc_id}")
+def delete_manual_service(request: Request, svc_id: int):
+    admin = _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "forbidden"}, status_code=403)
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM home_manual_services WHERE id = %s", (svc_id,))
+    _log_audit(admin["email"], "manual-service.delete", str(svc_id))
+    _svc_cache.invalidate()
+    return {"id": svc_id, "ok": True}
 
 
 # ── Static pages ─────────────────────────────────────────

@@ -65,6 +65,7 @@
       <button class="tab" data-tab="users">Users</button>
       <button class="tab" data-tab="user-acl">User Access</button>
       <button class="tab" data-tab="announcements">公告</button>
+      <button class="tab" data-tab="services">手动服务</button>
       <button class="tab" data-tab="audit">审计日志</button>
       <button class="tab" data-tab="environment">系统环境</button>
     </div>
@@ -134,6 +135,22 @@
       </table></div>
     </div>
 
+    <!-- Manual Services -->
+    <div class="section" id="sec-services">
+      <h2>手动服务 <span class="hint">注册无 Docker label 的 Traefik 路由（如 dsh / hermes-dashboard），Host 用于 ACL 授权</span></h2>
+      <div class="form-row">
+        <input id="ms-title" placeholder="标题">
+        <input id="ms-host" placeholder="host (e.g. dsh.kazusa.feng.moe)">
+        <input id="ms-icon" placeholder="图标 (emoji)" value="📁">
+        <input id="ms-category" placeholder="分类">
+        <button class="btn btn-sm btn-primary" onclick="addManualService()">添加</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>标题</th><th>Host</th><th>分类</th><th>排序</th><th>启用</th><th></th></tr></thead>
+        <tbody id="ms-body"></tbody>
+      </table></div>
+    </div>
+
     <!-- System environment -->
     <div class="section" id="sec-environment">
       <h2>系统环境 <span class="hint">仅显示运行时非敏感配置；Token、Secret、Password 等变量由服务端直接过滤</span></h2>
@@ -169,7 +186,7 @@ tabs.forEach(tab => {
     sections.forEach(s => s.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('sec-' + tab.dataset.tab).classList.add('active');
-    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl, 'announcements': loadAnnouncements, 'audit': loadAudit, 'environment': loadEnvironment };
+    const loaders = { 'role-acl': loadRoleAcl, 'presets': loadPresets, 'users': loadUsers, 'user-acl': loadAcl, 'announcements': loadAnnouncements, 'services': loadManualServices, 'audit': loadAudit, 'environment': loadEnvironment };
     const fn = loaders[tab.dataset.tab];
     if (fn) fn();
   });
@@ -425,6 +442,41 @@ async function loadAudit() {
     <td style="color:var(--text-muted);font-size:12px">${esc(l.details)}</td>
   </tr>`).join('');
   refreshIcons();
+}
+
+// ── Manual Services ──
+async function loadManualServices() {
+  const r = await apiFetch('/api/admin/manual-services');
+  if (!r.ok) return;
+  const items = await r.json();
+  document.getElementById('ms-body').innerHTML = items.map(s => `<tr>
+    <td>${esc(s.icon)} ${esc(s.title)}</td>
+    <td>${s.host ? `<code>${esc(s.host)}</code>` : '—'}</td>
+    <td>${esc(s.category) || '—'}</td>
+    <td>${esc(String(s.order ?? 100))}</td>
+    <td class="toggle" onclick="toggleManualService(${s.id},${!s.enabled})">${s.enabled ? icon('circle-check-big', 'toggle-icon', '已启用') : icon('circle', 'toggle-icon', '未启用')}</td>
+    <td><button class="btn btn-sm btn-danger" onclick="delManualService(${s.id})">delete</button></td>
+  </tr>`).join('');
+  refreshIcons();
+}
+async function addManualService() {
+  const title = document.getElementById('ms-title').value.trim();
+  const host = document.getElementById('ms-host').value.trim();
+  const icon = document.getElementById('ms-icon').value.trim();
+  const category = document.getElementById('ms-category').value.trim();
+  if (!title) { showMsg('标题必填', false); return; }
+  const r = await apiFetch('/api/admin/manual-services', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, host, icon: icon || '📁', category, order: 100})});
+  if (r.ok) { showMsg('已添加手动服务'); ['ms-title','ms-host','ms-category'].forEach(id => document.getElementById(id).value=''); loadManualServices(); }
+  else { const e = await r.json(); showMsg(e.error || '添加失败', false); }
+}
+async function toggleManualService(id, enabled) {
+  await apiFetch(`/api/admin/manual-services/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled})});
+  loadManualServices();
+}
+async function delManualService(id) {
+  if (!confirm('删除该手动服务？')) return;
+  await apiFetch(`/api/admin/manual-services/${id}`, {method:'DELETE'});
+  showMsg('已删除'); loadManualServices();
 }
 
 init();

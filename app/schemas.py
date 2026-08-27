@@ -130,6 +130,33 @@ class AnnouncementUpdate(BaseModel):
     level: Optional[str] = Field(default=None, pattern=r"^(info|warn|error)$")
 
 
+# ── Admin: Manual Services ───────────────────────────────
+
+class ManualServiceBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(default="", max_length=2000)
+    icon: str = Field(default="📁", max_length=64)
+    url: str = Field(default="", max_length=2048)
+    host: str = Field(default="", max_length=512)
+    category: str = Field(default="", max_length=128)
+    order: int = Field(default=100, ge=0, le=100000)
+
+
+class ManualServiceCreate(ManualServiceBase):
+    pass
+
+
+class ManualServiceUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=2000)
+    icon: Optional[str] = Field(default=None, max_length=64)
+    url: Optional[str] = Field(default=None, max_length=2048)
+    host: Optional[str] = Field(default=None, max_length=512)
+    category: Optional[str] = Field(default=None, max_length=128)
+    order: Optional[int] = Field(default=None, ge=0, le=100000)
+    enabled: Optional[bool] = None
+
+
 # ── QR Login ───────────────────────────────────────────
 
 class QRConfirmRequest(BaseModel):

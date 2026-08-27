@@ -204,6 +204,7 @@
   }
 
   loadSessions();
+  document.addEventListener('i18n:change', () => { loadSessions(); });
   </script>
 </body>
 </html>

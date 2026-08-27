@@ -232,25 +232,9 @@ const userBar = document.getElementById('user-bar');
 const annDiv = document.getElementById('announcements');
 
 let isAuthenticated = false;
+let _me = null;
 
-document.addEventListener('i18n:change', () => { loadServices(true); });
-
-async function loadUser() {
-  try {
-    const r = await fetch('/api/me');
-    if (r.ok) {
-      const u = await r.json();
-      if (u.authenticated) {
-        window.csrfToken = u.csrf || '';
-        isAuthenticated = true;
-        renderAccountChip(u);
-        loadServices();
-        return;
-      }
-    }
-  } catch {}
-  // Unauthenticated
-  isAuthenticated = false;
+function renderLoginBar() {
   userBar.style.display = 'block';
   userBar.innerHTML = `<div class="auth-actions">
     <form action="/auth/login" method="GET">
@@ -265,6 +249,33 @@ async function loadUser() {
     </button>
   </div>`;
   refreshIcons();
+}
+
+document.addEventListener('i18n:change', () => {
+  if (_me) renderAccountChip(_me);
+  else renderLoginBar();
+  loadServices(true);
+});
+
+async function loadUser() {
+  try {
+    const r = await fetch('/api/me');
+    if (r.ok) {
+      const u = await r.json();
+      if (u.authenticated) {
+        window.csrfToken = u.csrf || '';
+        isAuthenticated = true;
+        _me = u;
+        renderAccountChip(u);
+        loadServices();
+        return;
+      }
+    }
+  } catch {}
+  // Unauthenticated
+  isAuthenticated = false;
+  _me = null;
+  renderLoginBar();
   loadServices();
 }
 

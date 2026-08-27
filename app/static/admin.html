@@ -284,6 +284,11 @@ function switchToHash() {
 }
 window.addEventListener('hashchange', switchToHash);
 
+document.addEventListener('i18n:change', () => {
+  const cur = document.querySelector('.tab.active');
+  if (cur && loaders[cur.dataset.tab]) loaders[cur.dataset.tab]();
+});
+
 async function init() {
   const r = await apiFetch('/api/me');
   if (!r.ok) { document.getElementById('denied').style.display='block'; return; }

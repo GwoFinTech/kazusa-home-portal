@@ -252,7 +252,7 @@
       document.getElementById('help-body').innerHTML = bodies[loc] || bodies['zh-CN'];
       window.lucide?.createIcons();
     }
-    document.addEventListener('i18n:change', renderHelpBody);
+    document.addEventListener('i18n:change', () => { renderHelpBody(); loadTokens(); });
     let tokens = [];
     let revokeTarget = null;
     let lastCreatedToken = '';

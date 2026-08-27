@@ -1,5 +1,5 @@
-const CACHE = 'kazusa-v4';
-const PRECACHE = ['/', '/common.css?v=tokens-v1', '/common.js?v=lucide-v1', '/i18n.js?v=i18n-v1', '/manifest.json'];
+const CACHE = 'kazusa-v5';
+const PRECACHE = ['/', '/common.css?v=tokens-v2', '/common.js?v=lucide-v1', '/i18n.js?v=i18n-v2', '/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)));
@@ -19,6 +19,21 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
   // Skip API calls
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) return;
+  // Document navigations: network-first so HTML updates deploy immediately
+  // (cached copy is only a fallback when offline). Subresources stay
+  // stale-while-revalidate and are versioned via ?v= query strings.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        if (resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return resp;
+      }).catch(() => caches.match(e.request).then(c => c || caches.match('/')))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetched = fetch(e.request).then(resp => {

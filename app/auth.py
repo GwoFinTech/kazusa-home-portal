@@ -201,12 +201,18 @@ def _client_ip(request: Request) -> str:
     return ""
 
 
-def _make_session_token(user_id: int, email: str, request: Request | None = None) -> str:
+def _make_session_token(user_id: int, email: str, request: Request | None = None,
+                        mock: bool = False) -> str:
     """Create a signed session token and store its hash in home_sessions.
 
     Token format (new): user_id.email.timestamp.nonce.signature
     The nonce ensures each login produces a unique DB row, avoiding
     duplicate-key collisions when a user logs in multiple times per second.
+
+    Sessions are capped in three isolated pools (see config.SESSION_CAP_*):
+    mock sessions and interactive sessions never evict each other, and within
+    the interactive pool each client (user_agent) is capped separately, so a
+    churning script cannot log other devices out.
     """
     ts = str(int(time.time()))
     nonce = secrets.token_urlsafe(8)
@@ -223,16 +229,40 @@ def _make_session_token(user_id: int, email: str, request: Request | None = None
         with db_cursor() as cur:
             # Purge expired sessions
             cur.execute("DELETE FROM home_sessions WHERE expires_at < now()")
-            # Remove oldest sessions if user has too many (keep last 10)
+            if mock:
+                # Mock/test logins are capped only among themselves, so
+                # automated mock-login runs never evict interactive sessions.
+                cur.execute(
+                    "DELETE FROM home_sessions WHERE user_id = %s AND is_mock "
+                    "AND id NOT IN (SELECT id FROM home_sessions "
+                    "               WHERE user_id = %s AND is_mock "
+                    "               ORDER BY created_at DESC LIMIT %s)",
+                    (user_id, user_id, config.SESSION_CAP_MOCK),
+                )
+            else:
+                # Interactive: keep the last N sessions per client, so one
+                # device cannot evict the sessions of other devices.
+                cur.execute(
+                    "DELETE FROM home_sessions WHERE user_id = %s AND NOT is_mock "
+                    "AND user_agent = %s "
+                    "AND id NOT IN (SELECT id FROM home_sessions "
+                    "               WHERE user_id = %s AND NOT is_mock AND user_agent = %s "
+                    "               ORDER BY created_at DESC LIMIT %s)",
+                    (user_id, user_agent, user_id, user_agent,
+                     config.SESSION_CAP_PER_CLIENT),
+                )
+                # Safety net: bound the whole interactive pool per user.
+                cur.execute(
+                    "DELETE FROM home_sessions WHERE user_id = %s AND NOT is_mock "
+                    "AND id NOT IN (SELECT id FROM home_sessions "
+                    "               WHERE user_id = %s AND NOT is_mock "
+                    "               ORDER BY created_at DESC LIMIT %s)",
+                    (user_id, user_id, config.SESSION_CAP_PER_USER),
+                )
             cur.execute(
-                "DELETE FROM home_sessions WHERE user_id = %s AND id NOT IN "
-                "(SELECT id FROM home_sessions WHERE user_id = %s ORDER BY created_at DESC LIMIT 9)",
-                (user_id, user_id),
-            )
-            cur.execute(
-                "INSERT INTO home_sessions (id, user_id, expires_at, ip_addr, user_agent, last_used_at) "
-                "VALUES (%s, %s, %s, %s, %s, now())",
-                (token_hash, user_id, expires_at, ip_addr, user_agent),
+                "INSERT INTO home_sessions (id, user_id, expires_at, ip_addr, user_agent, is_mock, last_used_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, now())",
+                (token_hash, user_id, expires_at, ip_addr, user_agent, mock),
             )
     except Exception as e:
         logging.warning("Failed to store session hash: %s", e)
@@ -577,7 +607,7 @@ async def list_sessions(request: Request):
 
     with db_cursor() as cur:
         cur.execute(
-            """SELECT id, user_id, created_at, expires_at, ip_addr, user_agent, last_used_at
+            """SELECT id, user_id, created_at, expires_at, ip_addr, user_agent, last_used_at, is_mock
                FROM home_sessions
                WHERE user_id = %s AND expires_at > now()
                ORDER BY created_at DESC""",
@@ -1018,8 +1048,9 @@ async def mock_login(request: Request, body: schemas.MockLoginRequest | None = N
             user = {"id": user_id, "email": email, "name": email.split("@")[0], "role": role}
         user_id = user["id"]
 
-    # Create a real signed session token (same as OAuth callback)
-    token = _make_session_token(user_id, email, request)
+    # Create a real signed session token (same as OAuth callback), flagged as
+    # a mock session so it never participates in interactive session eviction.
+    token = _make_session_token(user_id, email, request, mock=True)
 
     # Build response with Set-Cookie
     result = {

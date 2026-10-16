@@ -17,6 +17,13 @@ MAX_AGE = int(os.getenv("SESSION_MAX_AGE", "86400"))  # 24h
 COOKIE = "hp_session"
 COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "")
 
+# Session caps — enforced in _make_session_token(). Interactive sessions are
+# capped per client (user_agent) so one churning device cannot evict sessions
+# of other devices; mock-login sessions live in a separate pool.
+SESSION_CAP_PER_CLIENT = int(os.getenv("SESSION_CAP_PER_CLIENT", "10"))
+SESSION_CAP_PER_USER = int(os.getenv("SESSION_CAP_PER_USER", "100"))
+SESSION_CAP_MOCK = int(os.getenv("SESSION_CAP_MOCK", "30"))
+
 # ── Verify signing ──
 # Shared secret for HMAC-signed /auth/verify responses (dsh privileged-auth-http
 # verifySecret protocol). Empty = unsigned plain-header mode (backward compatible).

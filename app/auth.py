@@ -229,6 +229,13 @@ def _make_session_token(user_id: int, email: str, request: Request | None = None
         with db_cursor() as cur:
             # Purge expired sessions
             cur.execute("DELETE FROM home_sessions WHERE expires_at < now()")
+            # Insert first, then enforce caps: the new session is always inside
+            # the "keep newest" set, so each pool holds exactly its cap rows.
+            cur.execute(
+                "INSERT INTO home_sessions (id, user_id, expires_at, ip_addr, user_agent, is_mock, last_used_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s, now())",
+                (token_hash, user_id, expires_at, ip_addr, user_agent, mock),
+            )
             if mock:
                 # Mock/test logins are capped only among themselves, so
                 # automated mock-login runs never evict interactive sessions.
@@ -259,11 +266,6 @@ def _make_session_token(user_id: int, email: str, request: Request | None = None
                     "               ORDER BY created_at DESC LIMIT %s)",
                     (user_id, user_id, config.SESSION_CAP_PER_USER),
                 )
-            cur.execute(
-                "INSERT INTO home_sessions (id, user_id, expires_at, ip_addr, user_agent, is_mock, last_used_at) "
-                "VALUES (%s, %s, %s, %s, %s, %s, now())",
-                (token_hash, user_id, expires_at, ip_addr, user_agent, mock),
-            )
     except Exception as e:
         logging.warning("Failed to store session hash: %s", e)
 

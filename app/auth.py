@@ -5,14 +5,17 @@ import hashlib
 import hmac
 import html
 import io
+import json
 import logging
 import os
 import re
 import secrets
+import string
 import threading
 import time
 from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatch
+from functools import lru_cache
 from typing import Optional
 from urllib.parse import urlencode, quote
 
@@ -132,60 +135,40 @@ def st(request, key: str, **params) -> str:
     return msg
 
 
+# ── Page templates ─────────────────────────────────────
+# HTML pages live in app/static/*.html and are rendered with string.Template
+# ("$name" placeholders), never Python f-strings, so literal CSS/JS braces in a
+# template can never be evaluated as Python and break the page at runtime.
+_STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+_HTML_LANG = {"zh-CN": "zh-CN", "zh-TW": "zh-TW", "en-US": "en", "ja": "ja"}
+
+
+@lru_cache(maxsize=32)
+def _page_template(name: str) -> string.Template:
+    with open(os.path.join(_STATIC_DIR, name), "r", encoding="utf-8") as f:
+        return string.Template(f.read())
+
+
+def _render_page(name: str, **values) -> str:
+    """Render app/static/<name> with $placeholder substitution (strict)."""
+    return _page_template(name).substitute(values)
+
+
+def _html_lang(request) -> str:
+    return _HTML_LANG[_detect_locale(request)]
+
+
 def _error_page(request, title: str, icon: str, message: str, action_url: str, action_text: str, status: int) -> str:
     """Render a styled error page matching portal design."""
-    lang_tag = {"zh-CN": "zh-CN", "zh-TW": "zh-TW", "en-US": "en", "ja": "ja"}[_detect_locale(request)]
-    return f"""<!DOCTYPE html>
-<html lang="{lang_tag}">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{title} — kazusa</title>
-  <style>
-    :root {{
-      --bg: #fafafa; --card-bg: #fff; --border: #e5e7eb; --text: #171717;
-      --text-muted: #737373; --text-subtle: #a3a3a3; --accent: #2563eb;
-    }}
-    @media (prefers-color-scheme: dark) {{
-      :root {{
-        --bg: #0a0a0a; --card-bg: #171717; --border: #262626; --text: #fafafa;
-        --text-muted: #a3a3a3; --text-subtle: #525252; --accent: #60a5fa;
-      }}
-    }}
-    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      background: var(--bg); color: var(--text); min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
-    }}
-    .container {{
-      text-align: center; padding: 48px 32px; max-width: 400px;
-    }}
-    .icon {{ margin-bottom: 16px; }}
-    .icon svg {{ width: 48px; height: 48px; stroke-width: 1.8; }}
-    h1 {{ font-size: 20px; font-weight: 600; margin-bottom: 8px; }}
-    p {{ color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }}
-    a {{
-      display: inline-block; padding: 10px 24px; border-radius: 8px;
-      background: var(--accent); color: #fff; text-decoration: none;
-      font-size: 14px; font-weight: 500; transition: filter .15s;
-    }}
-    a:hover {{ filter: brightness(1.15); }}
-    .footer {{ margin-top: 32px; font-size: 11px; color: var(--text-subtle); }}
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="icon"><i data-lucide="{icon}" aria-hidden="true"></i></div>
-    <h1>{title}</h1>
-    <p>{message}</p>
-    <a href="{action_url}">{action_text}</a>
-    <div class="footer">kazusa home portal</div>
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script>lucide.createIcons();</script>
-</body>
-</html>"""
+    return _render_page(
+        "error.html",
+        lang=_html_lang(request),
+        title=title,
+        icon=html.escape(icon),
+        message=message,  # locale strings carry intentional markup (<strong>)
+        action_url=html.escape(action_url, quote=True),
+        action_text=html.escape(action_text),
+    )
 
 
 def _client_ip(request: Request) -> str:
@@ -809,113 +792,43 @@ async def qr_confirm_page(request: Request):
         return RedirectResponse(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
 
     csrf = _csrf_token(request.cookies.get(config.COOKIE, ""))
-    return HTMLResponse(f"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0a0a0a">
-  <link rel="stylesheet" href="/common.css?v=tokens-v1">
-  <title>{st(request, 'qr.confirmTitle')} — kazusa</title>
-  <style>
-    body {{ min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px; }}
-    .confirm-shell {{
-      background: var(--hover-bg); border: 1px solid var(--border);
-      border-radius: calc(var(--radius-lg) + 6px); padding: 8px;
-      box-shadow: var(--shadow-1);
-      animation: shell-in 500ms var(--ease-out) backwards;
-    }}
-    @keyframes shell-in {{
-      from {{ opacity: 0; transform: translateY(12px) scale(.98); }}
-      to   {{ opacity: 1; transform: translateY(0) scale(1); }}
-    }}
-    .confirm-card {{
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
-      padding: 40px 32px; text-align: center; max-width: 380px; width: 100%;
-    }}
-    .confirm-card h1 {{ font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }}
-    .confirm-card p {{ font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }}
-    .user-info {{
-      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
-      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-      margin-bottom: 28px; text-align: left;
-    }}
-    .user-info img {{ width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }}
-    .user-info .name {{ font-size: 15px; font-weight: 600; }}
-    .user-info .email {{ font-size: 12px; color: var(--text-muted); margin-top: 2px; }}
-    .btn {{ width: 100%; }}
-    .btn-outline {{ color: var(--text-muted); }}
-    .msg {{ margin-top: 16px; display: none; padding: 10px; border-radius: 8px; font-size: 13px; }}
-  </style>
-</head>
-<body>
-  <div class="confirm-shell">
-  <div class="confirm-card">
-    <h1>{st(request, 'qr.confirmTitle')}</h1>
-    <p>{st(request, 'qr.confirmDesc')}</p>
-    <div class="user-info">
-      {f'<img src="{html.escape(user.get("picture", ""))}" alt="">' if user.get("picture") else ''}
-      <div>
-        <div class="name">{html.escape(user.get("name", ""))}</div>
-        <div class="email">{html.escape(user.get("email", ""))}</div>
-      </div>
-    </div>
-    <button class="btn btn-primary" id="confirm-btn">{st(request, 'qr.confirmBtn')}</button>
-    <button class="btn btn-outline" id="cancel-btn" onclick="window.location.href='{config.PORTAL_URL}'">{st(request, 'qr.cancelBtn')}</button>
-    <div class="msg" id="msg"></div>
-  </div>
-  </div>
-  <script>
-    const COUNTDOWN_TMPL = '{st(request, 'qr.backPortal')}';
-    document.getElementById('confirm-btn').addEventListener('click', async function() {{
-      const btn = this;
-      btn.disabled = true;
-      btn.textContent = '{st(request, 'qr.authorizing')}';
-      const msg = document.getElementById('msg');
-      try {{
-        const r = await fetch('/auth/qr/confirm', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json', 'X-CSRF-Token': '{csrf}' }},
-          body: JSON.stringify({{ sid: '{sid}' }}),
-        }});
-        const data = await r.json();
-        if (data.ok) {{
-          msg.style.display = 'block';
-          msg.className = 'msg msg-ok';
-          msg.textContent = '{st(request, 'qr.confirmSent')}';
-          btn.textContent = '{st(request, 'qr.backPortal').format(sec=3)}';
-          btn.disabled = false;
-          document.getElementById('cancel-btn').style.display = 'none';
-          btn.onclick = function() {{ window.location.href = '{config.PORTAL_URL}'; }};
-          var sec = 3;
-          var timer = setInterval(function() {{
-            sec--;
-            if (sec <= 0) {{
-              clearInterval(timer);
-              window.location.href = '{config.PORTAL_URL}';
-            }} else {{
-              btn.textContent = COUNTDOWN_TMPL.replace('{{sec}}', sec);
-            }}
-          }}, 1000);
-        }} else {{
-          msg.style.display = 'block';
-          msg.className = 'msg msg-err';
-          msg.textContent = data.error || '{st(request, 'qr.authFailed')}';
-          btn.disabled = false;
-          btn.textContent = '{st(request, 'qr.retry')}';
-        }}
-      }} catch {{
-        msg.style.display = 'block';
-        msg.className = 'msg msg-err';
-        msg.textContent = '{st(request, 'qr.networkError')}';
-        btn.disabled = false;
-        btn.textContent = '{st(request, 'qr.retry')}';
-      }}
-    }});
-  </script>
-  <script src="/common.js"></script>
-</body>
-</html>""")
+    # Page is rendered from app/static/qr-confirm.html (string.Template, not an
+    # f-string) — JS/CSS braces in the template can never break this handler.
+    i18n = json.dumps(
+        {
+            "confirmSent": st(request, "qr.confirmSent"),
+            "backPortal": st(request, "qr.backPortal"),
+            "authorizing": st(request, "qr.authorizing"),
+            "authFailed": st(request, "qr.authFailed"),
+            "retry": st(request, "qr.retry"),
+            "networkError": st(request, "qr.networkError"),
+        },
+        ensure_ascii=False,
+    )
+    picture = user.get("picture") or ""
+    pic_html = ""
+    if picture:
+        pic_html = '<img src="%s" alt="">' % html.escape(picture, quote=True)
+    user_block = "%s<div><div class=\"name\">%s</div><div class=\"email\">%s</div></div>" % (
+        pic_html,
+        html.escape(user.get("name", "")),
+        html.escape(user.get("email", "")),
+    )
+
+    page = _render_page(
+        "qr-confirm.html",
+        lang=_html_lang(request),
+        title=html.escape(st(request, "qr.confirmTitle")),
+        desc=html.escape(st(request, "qr.confirmDesc")),
+        user_block=user_block,
+        confirm_btn=html.escape(st(request, "qr.confirmBtn")),
+        cancel_btn=html.escape(st(request, "qr.cancelBtn")),
+        sid=html.escape(sid, quote=True),
+        csrf=html.escape(csrf, quote=True),
+        portal_url=html.escape(config.PORTAL_URL, quote=True),
+        i18n=html.escape(i18n, quote=True),
+    )
+    return HTMLResponse(page, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/auth/qr/confirm")

@@ -592,6 +592,11 @@ def i18n_js():
     return FileResponse(os.path.join(STATIC_DIR, "i18n.js"), media_type="application/javascript")
 
 
+@app.get("/qr-confirm.js")
+def qr_confirm_js():
+    return FileResponse(os.path.join(STATIC_DIR, "qr-confirm.js"), media_type="application/javascript")
+
+
 @app.get("/manifest.json")
 def manifest():
     return FileResponse(os.path.join(STATIC_DIR, "manifest.json"), media_type="application/manifest+json")

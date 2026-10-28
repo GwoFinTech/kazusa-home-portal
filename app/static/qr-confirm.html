@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="stylesheet" href="/common.css?v=tokens-v1">
+  <title>${title} — kazusa</title>
+  <style>
+    body { min-height: 100dvh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .confirm-shell {
+      background: var(--hover-bg); border: 1px solid var(--border);
+      border-radius: calc(var(--radius-lg) + 6px); padding: 8px;
+      box-shadow: var(--shadow-1);
+      animation: shell-in 500ms var(--ease-out) backwards;
+    }
+    @keyframes shell-in {
+      from { opacity: 0; transform: translateY(12px) scale(.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .confirm-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 40px 32px; text-align: center; max-width: 380px; width: 100%;
+    }
+    .confirm-card h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .confirm-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+    .user-info {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      margin-bottom: 28px; text-align: left;
+    }
+    .user-info img { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+    .user-info .name { font-size: 15px; font-weight: 600; }
+    .user-info .email { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .btn { width: 100%; }
+    .btn-outline { color: var(--text-muted); }
+    .msg { margin-top: 16px; display: none; padding: 10px; border-radius: 8px; font-size: 13px; }
+  </style>
+</head>
+<body data-sid="${sid}" data-csrf="${csrf}" data-portal-url="${portal_url}" data-i18n="${i18n}">
+  <div class="confirm-shell">
+  <div class="confirm-card">
+    <h1>${title}</h1>
+    <p>${desc}</p>
+    <div class="user-info">
+      ${user_block}
+    </div>
+    <button class="btn btn-primary" id="confirm-btn">${confirm_btn}</button>
+    <button class="btn btn-outline" id="cancel-btn">${cancel_btn}</button>
+    <div class="msg" id="msg"></div>
+  </div>
+  </div>
+  <script src="/qr-confirm.js?v=qr1"></script>
+  <script src="/common.js"></script>
+</body>
+</html>

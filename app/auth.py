@@ -894,7 +894,7 @@ async def qr_confirm_page(request: Request):
               clearInterval(timer);
               window.location.href = '{config.PORTAL_URL}';
             }} else {{
-              btn.textContent = COUNTDOWN_TMPL.replace('{sec}', sec);
+              btn.textContent = COUNTDOWN_TMPL.replace('{{sec}}', sec);
             }}
           }}, 1000);
         }} else {{

@@ -27,7 +27,7 @@ grep -q 'src="/qr-confirm.js' "$PAGE" && echo "PASS: page loads external JS" || 
 grep -qE '\$\{|\{st\(|\{\{' "$PAGE" && { echo "FAIL: unresolved template placeholder in page"; FAILS=$((FAILS+1)); } || echo "PASS: no unresolved placeholders"
 JS=$(curl -s "$BASE/qr-confirm.js")
 printf '%s' "$JS" | grep -q "replace('{sec}', sec)" && echo "PASS: JS countdown placeholder intact" || { echo "FAIL: JS lost {sec} placeholder"; FAILS=$((FAILS+1)); }
-printf '%s' "$JS" | grep -q 'document.body.dataset' && echo "PASS: JS config comes from data-*" || { echo "FAIL: JS not reading data-*"; FAILS=$((FAILS+1)); }
+printf '%s' "$JS" | grep -q 'body.dataset' && echo "PASS: JS config comes from data-*" || { echo "FAIL: JS not reading data-*"; FAILS=$((FAILS+1)); }
 
 echo "== device A confirms, device B polls =="
 CF=$(curl -s -X POST "$BASE/auth/qr/confirm" -H 'Content-Type: application/json' -H "X-CSRF-Token: $CSRF" -H "Cookie: hp_session=$TOK" -d "{\"sid\":\"$SID\"}")

@@ -34,21 +34,21 @@ TOK=$(curl -s -X POST "$BASE/auth/mock-login" -H 'Content-Type: application/json
 SID=$(curl -s -X POST "$BASE/auth/qr/create" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("sid",""))')
 [ -n "$SID" ] || { echo "FAIL: /auth/qr/create returned no sid"; exit 1; }
 
-# "path|expected_status|templated(1/0)"
+# "path|expected_status|kind(html|tpl|asset)"
 ROUTES=(
-  "/|200|0"
-  "/login|200|0"
-  "/account/sessions|200|0"
-  "/account/tokens|200|0"
-  "/admin|200|0"
-  "/manifest.json|200|0"
-  "/sw.js|200|0"
-  "/common.js|200|0"
-  "/i18n.js|200|0"
-  "/qr-confirm.js|200|0"
-  "/auth/qr/confirm|400|1"
-  "/auth/qr/confirm?sid=definitely-not-a-real-sid|410|1"
-  "/auth/qr/confirm?sid=$SID|200|1"
+  "/|200|html"
+  "/login|200|html"
+  "/account/sessions|200|html"
+  "/account/tokens|200|html"
+  "/admin|200|html"
+  "/manifest.json|200|asset"
+  "/sw.js|200|asset"
+  "/common.js|200|asset"
+  "/i18n.js|200|asset"
+  "/qr-confirm.js|200|asset"
+  "/auth/qr/confirm|400|tpl"
+  "/auth/qr/confirm?sid=definitely-not-a-real-sid|410|tpl"
+  "/auth/qr/confirm?sid=$SID|200|tpl"
 )
 LOCALES=(zh-CN zh-TW en-US ja)
 LEFT_RE='\{st\(|\{config\.|\{request\.[a-z]|\$\{|NameError|Traceback|Internal Server Error'
@@ -56,19 +56,21 @@ LEFT_RE='\{st\(|\{config\.|\{request\.[a-z]|\$\{|NameError|Traceback|Internal Se
 for loc in "${LOCALES[@]}"; do
   echo "== locale $loc =="
   for r in "${ROUTES[@]}"; do
-    path=${r%%|*}; rest=${r#*|}; want=${rest%%|*}; tpl=${rest##*|}
+    path=${r%%|*}; rest=${r#*|}; want=${rest%%|*}; kind=${rest##*|}
     out="$TMP/page"
     code=$(curl -s -o "$out" -w '%{http_code}' -A "HermesPageSmoke/1.0" \
                 -H "Accept-Language: $loc" -H "Cookie: hp_session=$TOK" "$BASE$path")
     check "GET $path [$loc] status" "$want" "$code"
-    grep -q '<html' "$out" || fail "GET $path [$loc] body is not HTML"
-    grep -qE 'Traceback|Internal Server Error' "$out" && fail "GET $path [$loc] body leaks error text"
-    if [ "$tpl" = "1" ]; then
+    [ -s "$out" ] || fail "GET $path [$loc] empty body"
+    if [ "$kind" != "asset" ]; then
+      grep -q '<html' "$out" || fail "GET $path [$loc] body is not HTML"
+      grep -qE 'Traceback|Internal Server Error' "$out" && fail "GET $path [$loc] body leaks error text"
+    fi
+    if [ "$kind" = "tpl" ]; then
       if grep -qE "$LEFT_RE" "$out"; then
         fail "GET $path [$loc] unresolved placeholder: $(grep -oE "$LEFT_RE" "$out" | head -3 | tr '\n' ' ')"
       fi
       grep -qE '\{\{|\}\}' "$out" && fail "GET $path [$loc] doubled-brace artifact ({{ or }})"
-      grep -q '\${' "$out" && fail "GET $path [$loc] unsubstituted \$ -placeholder"
     fi
   done
 done

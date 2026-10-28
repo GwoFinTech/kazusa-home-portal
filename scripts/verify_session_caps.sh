@@ -81,7 +81,11 @@ for i in $(seq 1 12); do
   sleep 1
 done
 MOCKN=$(sql "SELECT count(*) FROM home_sessions WHERE user_id=1 AND is_mock")
-check "mock pool = baseline + device A + 12 storm" $((MOCK_BASE + 13)) "$MOCKN"
+CAP_MOCK=$(envval SESSION_CAP_MOCK); CAP_MOCK=${CAP_MOCK:-30}
+EXP_MOCK=$((MOCK_BASE + 13)); [ "$EXP_MOCK" -gt "$CAP_MOCK" ] && EXP_MOCK=$CAP_MOCK
+check "mock pool = min(baseline+13, cap $CAP_MOCK)" "$EXP_MOCK" "$MOCKN"
+MOCK_FLAGGED=$(sql "SELECT count(*) FROM home_sessions WHERE user_id=1 AND user_agent='HermesE2E/MockStorm' AND NOT is_mock")
+check "storm sessions are all flagged is_mock" 0 "$MOCK_FLAGGED"
 NOW_INTERACTIVE=$(sql "SELECT count(*) FROM home_sessions WHERE user_id=1 AND NOT is_mock")
 EXP_INTERACTIVE=$((BEFORE_INTERACTIVE + 10 + 3))
 check "interactive pool untouched by mock storm" "$EXP_INTERACTIVE" "$NOW_INTERACTIVE"

@@ -21,10 +21,13 @@ echo "== device A: render confirm page (was HTTP 500) =="
 PAGE=/root/.hermes/cache/scratch/qr_confirm.html
 CODE=$(curl -s -o "$PAGE" -w '%{http_code}' -H "Cookie: hp_session=$TOK" "$BASE/auth/qr/confirm?sid=$SID")
 check "GET /auth/qr/confirm status" 200 "$CODE"
-grep -q "COUNTDOWN_TMPL.replace('{sec}', sec)" "$PAGE" && echo "PASS: rendered JS has literal {sec} replace" || { echo "FAIL: rendered JS placeholder wrong"; FAILS=$((FAILS+1)); }
-grep -q "{{sec}}" "$PAGE" && { echo "FAIL: unescaped double braces leaked into page"; FAILS=$((FAILS+1)); } || echo "PASS: no leaked {{sec}}"
-grep -q "const COUNTDOWN_TMPL = " "$PAGE" && echo "PASS: countdown template injected" || { echo "FAIL: no countdown template"; FAILS=$((FAILS+1)); }
-grep -o "const COUNTDOWN_TMPL = '[^']*'" "$PAGE"
+grep -q "data-sid=\"$SID\"" "$PAGE" && echo "PASS: page carries data-sid" || { echo "FAIL: data-sid missing"; FAILS=$((FAILS+1)); }
+grep -q 'data-i18n="' "$PAGE" && echo "PASS: page carries i18n payload" || { echo "FAIL: data-i18n missing"; FAILS=$((FAILS+1)); }
+grep -q 'src="/qr-confirm.js' "$PAGE" && echo "PASS: page loads external JS" || { echo "FAIL: external JS not referenced"; FAILS=$((FAILS+1)); }
+grep -qE '\$\{|\{st\(|\{\{' "$PAGE" && { echo "FAIL: unresolved template placeholder in page"; FAILS=$((FAILS+1)); } || echo "PASS: no unresolved placeholders"
+JS=$(curl -s "$BASE/qr-confirm.js")
+printf '%s' "$JS" | grep -q "replace('{sec}', sec)" && echo "PASS: JS countdown placeholder intact" || { echo "FAIL: JS lost {sec} placeholder"; FAILS=$((FAILS+1)); }
+printf '%s' "$JS" | grep -q 'document.body.dataset' && echo "PASS: JS config comes from data-*" || { echo "FAIL: JS not reading data-*"; FAILS=$((FAILS+1)); }
 
 echo "== device A confirms, device B polls =="
 CF=$(curl -s -X POST "$BASE/auth/qr/confirm" -H 'Content-Type: application/json' -H "X-CSRF-Token: $CSRF" -H "Cookie: hp_session=$TOK" -d "{\"sid\":\"$SID\"}")
